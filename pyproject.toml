@@ -1,0 +1,90 @@
+[tool.poetry]
+name = "arcane-scribe"
+version = "0.1.0"
+description = "A TTRPG Rulebook RAG System"
+authors = ["thatsmidnight <10793854+thatsmidnight@users.noreply.github.com>"]
+license = "CC0-1.0"
+readme = "README.md"
+package-mode = true
+
+[tool.poetry.dependencies]
+python = "~3.12"
+requests = "^2.32.3"
+pymupdf = "^1.26.0"
+sentence-transformers = "^4.1.0"
+faiss-cpu = "^1.11.0"
+boto3 = "^1.38.23"
+langchain = "^0.3.25"
+aws-cdk-lib = "^2.198.0"
+aws-lambda-powertools = "^3.13.0"
+constructs = "^10.4.2"
+langchain-community = "^0.3.24"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+pylint = "^3.3.7"
+flake8 = "^7.2.0"
+moto = "^5.1.5"
+pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
+coverage = "^7.8.2"
+nox = "^2025.5.1"
+isort = "^6.0.1"
+poethepoet = "^0.34.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poe.tasks]
+export = "poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt"
+test-unit = "poetry run pytest -s --cov-report term-missing --cov=. tests/unit"
+
+[tool.black]
+line-length = 78
+target-version = ['py312']
+skip-string-normalization = false
+preview = true
+
+[tool.isort]
+profile = "black"
+py_version = 312
+line_length = 79
+wrap_length = 78
+only_sections = true
+import_heading_stdlib = "Standard Library"
+import_heading_future = "Future"
+import_heading_firstparty = "First-Party"
+import_heading_thirdparty = "Third-Party"
+import_heading_localfolder = "Local Folder"
+known_localfolder = "cdk"
+multi_line_output = 5
+virtual_env = ".venv"
+include_trailing_comma = true
+use_parentheses = true
+group_by_package = true
+combine_straight_imports = false
+combine_as_imports = true
+
+[tool.coverage.run]
+branch = true
+source = ["models", "services", "utils", "app.py"]
+omit = [
+    "tests/*"
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_also = [
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

@@ -1,0 +1,127 @@
+name: Deploy Feature Branch to AWS
+
+on:
+  push:
+    branches:
+      - 'feature/**'  # Trigger on pushes to branches starting with 'feature/'
+      - 'main'  # Also allow manual trigger or push for main if needed for testing this workflow
+
+permissions:
+  id-token: write  # Required for OIDC if we switch to it
+  contents: read
+
+jobs:
+  lint_and_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '2.1.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true  # Recommended for CI caching
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies (if cache miss)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Run linters
+        run: |
+          poetry run flake8 .
+          poetry run black --check .
+          poetry run isort --check .
+
+      - name: Run tests
+        run: pytest
+
+  deploy_feature_stack:
+    runs-on: ubuntu-latest
+    environment: feature-deployment  # Optional: Define a GitHub environment for feature deployments
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '2.1.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true  # Recommended for CI caching
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies (if cache miss)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
+
+      - name: Determine Branch Name and Stack Suffix
+        id: branch-info
+        run: |
+          # Get the full branch name (e.g., feature/my-task or main)
+          BRANCH_FULL_NAME=${{ github.ref_name }}
+          echo "Full branch name from github.ref_name: ${BRANCH_FULL_NAME}"
+
+          # Extract the part after 'feature/' if it's a feature branch
+          if [[ "${BRANCH_FULL_NAME}" == feature/* ]]; then
+            # Use substring removal: ${string#prefix}
+            # This removes 'feature/' from the beginning of BRANCH_FULL_NAME
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME#feature/}
+          else
+            # For other branches (e.g., main), use the full branch name
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME}
+          fi
+          echo "Name part for suffix: ${FEATURE_NAME_PART}"
+
+          # Sanitize: replace any slashes (e.g., if feature_name_part was 'foo/bar') with hyphens
+          SANITIZED_NAME=$(echo "${FEATURE_NAME_PART}" | sed 's/\//-/g' | tr '[:upper:]' '[:lower:]') # also convert to lowercase
+          echo "Sanitized name: ${SANITIZED_NAME}"
+
+          # Create a shorter, safer suffix for stack names (max 20 chars as previously)
+          # CloudFormation stack names can be up to 128 chars, but resource names derived from it might have stricter limits.
+          # S3 bucket names also have length limits and character restrictions (e.g. no underscores, lowercase).
+          STACK_SUFFIX=$(echo "${SANITIZED_NAME}" | cut -c1-20)
+          echo "Final STACK_SUFFIX: ${STACK_SUFFIX}"
+
+          echo "STACK_SUFFIX=${STACK_SUFFIX}" >> $GITHUB_ENV
+
+      - name: CDK Synth
+        run: poetry run cdk synth --context stack-suffix=${{ env.STACK_SUFFIX }} -q
+
+      - name: CDK Deploy
+        run: poetry run cdk deploy --all --require-approval never --context stack-suffix=${{ env.STACK_SUFFIX }}

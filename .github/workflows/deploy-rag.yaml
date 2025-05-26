@@ -11,45 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  lint_and_test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
-        with:
-          version: '2.1.3'
-          virtualenvs-create: true
-          virtualenvs-in-project: true  # Recommended for CI caching
-
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-
-      - name: Install dependencies (if cache miss)
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-
-      - name: Run linters
-        run: |
-          poetry run flake8 .
-          poetry run black --check .
-          poetry run isort --check .
-
-      - name: Run tests
-        run: pytest
-
-  deploy_feature_stack:
+  deploy_stack:
     runs-on: ubuntu-latest
     environment: feature-deployment  # Optional: Define a GitHub environment for feature deployments
 
@@ -79,6 +41,12 @@ jobs:
       - name: Install dependencies (if cache miss)
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --no-root
+
+      - name: Run linters
+        run: |
+          poetry run flake8 .
+          poetry run black --check .
+          poetry run isort --check .
 
       - name: Install AWS CDK CLI
         run: npm install -g aws-cdk
@@ -119,6 +87,9 @@ jobs:
           echo "Final STACK_SUFFIX: ${STACK_SUFFIX}"
 
           echo "STACK_SUFFIX=${STACK_SUFFIX}" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: pytest
 
       - name: CDK Synth
         run: poetry run cdk synth --context stack-suffix=${{ env.STACK_SUFFIX }} -q

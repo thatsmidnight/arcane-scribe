@@ -84,9 +84,9 @@ jobs:
 
       - name: Run linters
         run: |
-          poetry run flake8 .
-          poetry run black --check .
-          poetry run isort --check .
+          poetry run flake8 src/ -v
+          poetry run black --check src/
+          poetry run isort --check src/
 
       - name: Run tests
         run: pytest

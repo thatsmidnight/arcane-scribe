@@ -89,7 +89,7 @@ jobs:
           poetry run isort --check src/
 
       - name: Run tests
-        run: pytest
+        run: poe test-unit
 
       - name: CDK Synth
         run: poetry run cdk synth --context stack-suffix=${{ env.STACK_SUFFIX }} -q

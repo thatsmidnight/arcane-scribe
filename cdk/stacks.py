@@ -27,12 +27,6 @@ class ArcaneScribeStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Get the unique part of the stack name (e.g., branch name) for
-        # resource naming. This helps ensure resource names are unique if the
-        # full stack name gets too long for some resources or provides a
-        # cleaner suffix.
-        stack_identifier = construct_id.replace("ArcaneScribeStack-", "")
-
         # region S3 Buckets
         # Bucket for storing uploaded PDF documents
         documents_bucket = CustomS3Bucket(
@@ -126,7 +120,7 @@ class ArcaneScribeStack(Stack):
         http_api = apigwv2.HttpApi(
             self,
             "ArcaneScribeHttpApi",
-            api_name=f"ArcaneScribeHttpApi-{stack_identifier.lower()}",
+            api_name=f"ArcaneScribeHttpApi-{stack_suffix}",
             cors_preflight=apigwv2.CorsPreflightOptions(
                 allow_origins=["*"],  # Adjust as needed for security
                 allow_methods=[

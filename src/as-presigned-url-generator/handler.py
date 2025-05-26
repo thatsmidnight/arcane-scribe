@@ -21,7 +21,7 @@ app = APIGatewayHttpResolver()  # For HTTP APIs
 try:
     s3_client = boto3.client("s3")
 except Exception as e:
-    logger.exception("Failed to initialize Boto3 S3 client globally: {e}")
+    logger.exception(f"Failed to initialize Boto3 S3 client globally: {e}")
     raise e
 
 # Retrieve environment variables

@@ -1,0 +1,6 @@
+aws-lambda-powertools~=3.13.0
+boto3~=1.38.23
+langchain~=0.3.25
+langchain-community~=0.3.24
+sentence-transformers~=4.1.0
+faiss-cpu~=1.11.0

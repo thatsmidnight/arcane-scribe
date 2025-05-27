@@ -7,14 +7,29 @@ from aws_cdk import (
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations as apigwv2_integrations,
     aws_s3_notifications as s3n,
+    aws_dynamodb as dynamodb,
     aws_s3 as s3,
     Duration,
 )
 from constructs import Construct
 
 # Local Folder
-from cdk.custom_constructs.lamdba_function import CustomLambda
 from cdk.custom_constructs.s3_bucket import CustomS3Bucket
+from cdk.custom_constructs.lamdba_function import CustomLambda
+from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
+from cdk.custom_constructs.iam_policy_statement import (
+    CustomIAMPolicyStatement,
+)
+
+# Define Bedrock model ARNs or use wildcards for simplicity in a dev environment.
+# For production, use specific model ARNs.
+# Example: arn:aws:bedrock:REGION::foundation-model/model-id
+# You can get these from the Bedrock console or documentation.
+# Common model IDs:
+# - Embeddings: amazon.titan-embed-text-v1 (or v2, check latest)
+# - Text Generation: amazon.titan-text-express-v1, amazon.titan-text-lite-v1
+BEDROCK_EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
+BEDROCK_TEXT_GENERATION_MODEL_ID = "amazon.titan-text-express-v1"
 
 
 class ArcaneScribeStack(Stack):
@@ -49,6 +64,34 @@ class ArcaneScribeStack(Stack):
         self.vector_store_bucket = vector_store_bucket.bucket
         # endregion
 
+        # region DynamoDB Tables
+        # This table will store query hashes and their corresponding Bedrock-generated answers
+        query_cache_table = CustomDynamoDBTable(
+            self,
+            "RagQueryCacheTable",
+            name="arcane-scribe-rag-query-cache",
+            partition_key=dynamodb.Attribute(
+                name="query_hash", type=dynamodb.AttributeType.STRING
+            ),
+            stack_suffix=stack_suffix,
+            time_to_live_attribute="ttl",
+        )
+        self.query_cache_table = query_cache_table.table
+        # endregion
+
+        # region IAM Policies
+        bedrock_invoke_policy = CustomIAMPolicyStatement(
+            self,
+            "BedrockInvokePolicy",
+            actions=["bedrock:InvokeModel"],
+            resources=[
+                f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_EMBEDDING_MODEL_ID}",
+                f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_TEXT_GENERATION_MODEL_ID}",
+            ],
+        )
+        self.bedrock_invoke_policy = bedrock_invoke_policy.statement
+        # endregion
+
         # region Lambda Functions
         # Lambda for generating pre-signed URLs for document uploads
         presigned_url_lambda = CustomLambda(
@@ -64,7 +107,7 @@ class ArcaneScribeStack(Stack):
         )
         self.presigned_url_lambda = presigned_url_lambda.function
 
-        # Grant permission to the presigned URL Lambda to put objects (via
+        # Grant S3 permission to the presigned URL Lambda to put objects (via
         # pre-signed URLs) to the documents bucket
         self.documents_bucket.grant_put(self.presigned_url_lambda)
         self.documents_bucket.grant_read(self.presigned_url_lambda)
@@ -80,13 +123,16 @@ class ArcaneScribeStack(Stack):
                     self.vector_store_bucket.bucket_name
                 ),
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name,
+                "BEDROCK_EMBEDDING_MODEL_ID": BEDROCK_EMBEDDING_MODEL_ID,
+                "AWS_DEFAULT_REGION": self.region,  # Bedrock SDK needs region
             },
             memory_size=1024,  # More memory for processing PDFs
             timeout=Duration.minutes(5),  # May take longer for large PDFs
+            initial_policy=[self.bedrock_invoke_policy],
         )
         self.pdf_ingestor_lambda = pdf_ingestor_lambda.function
 
-        # Grant permissions for the PDF ingestor Lambda
+        # Grant S3 permissions for the PDF ingestor Lambda
         self.documents_bucket.grant_read(self.pdf_ingestor_lambda)
         self.vector_store_bucket.grant_read_write(self.pdf_ingestor_lambda)
 
@@ -107,12 +153,26 @@ class ArcaneScribeStack(Stack):
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
                 ),
+                "BEDROCK_TEXT_GENERATION_MODEL_ID": (
+                    BEDROCK_TEXT_GENERATION_MODEL_ID
+                ),
+                "BEDROCK_EMBEDDING_MODEL_ID": (
+                    BEDROCK_EMBEDDING_MODEL_ID
+                ),  # For query embedding
+                "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
+                "AWS_DEFAULT_REGION": self.region,  # Bedrock SDK needs region
             },
             memory_size=1024,  # More memory for processing queries
             timeout=Duration.seconds(60),
+            initial_policy=[self.bedrock_invoke_policy],
         )
         self.rag_query_lambda = rag_query_lambda.function
+
+        # Grant S3 permissions for the RAG query Lambda
         self.vector_store_bucket.grant_read(self.rag_query_lambda)
+
+        # Grant DynamoDB permissions for the RAG query Lambda
+        self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
         # endregion
 
         # region API Gateway

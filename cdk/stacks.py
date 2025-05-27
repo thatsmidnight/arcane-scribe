@@ -135,7 +135,6 @@ class ArcaneScribeStack(Stack):
                 ),
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name,
                 "BEDROCK_EMBEDDING_MODEL_ID": BEDROCK_EMBEDDING_MODEL_ID,
-                "AWS_DEFAULT_REGION": self.region,  # Bedrock SDK needs region
             },
             memory_size=1024,  # More memory for processing PDFs
             timeout=Duration.minutes(5),  # May take longer for large PDFs
@@ -171,7 +170,6 @@ class ArcaneScribeStack(Stack):
                     BEDROCK_EMBEDDING_MODEL_ID
                 ),  # For query embedding
                 "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
-                "AWS_DEFAULT_REGION": self.region,  # Bedrock SDK needs region
             },
             memory_size=1024,  # More memory for processing queries
             timeout=Duration.seconds(60),

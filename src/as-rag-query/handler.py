@@ -3,7 +3,7 @@ import json
 from typing import Any, Dict
 
 # Third-Party
-from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger
 from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -13,12 +13,10 @@ from rag_query_processor import processor
 
 # Initialize Powertools
 logger = Logger()
-tracer = Tracer()
 app = APIGatewayHttpResolver()
 
 
 @app.post("/query")
-@tracer.capture_method
 def query_endpoint() -> Dict[str, Any]:
     try:
         # Initialize Boto3 clients and embedding model
@@ -154,7 +152,6 @@ def query_endpoint() -> Dict[str, Any]:
 @logger.inject_lambda_context(
     log_event=True, correlation_id_path=correlation_paths.API_GATEWAY_HTTP
 )
-@tracer.capture_lambda_handler
 def lambda_handler(
     event: Dict[str, Any], context: LambdaContext
 ) -> Dict[str, Any]:

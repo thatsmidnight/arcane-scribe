@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 # Third-Party
 from botocore.exceptions import ClientError
-from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -14,13 +14,11 @@ from presigned_url_generator import processor
 from presigned_url_generator.data_classes import PresignedUrlRequest
 
 # Initialize Powertools
-tracer = Tracer()
 logger = Logger()
 app = APIGatewayHttpResolver()
 
 
 @app.post("/srd/upload-url")
-@tracer.capture_method
 def get_presigned_url() -> Dict[str, Any]:
     """
     Endpoint to generate a presigned URL for uploading files to S3.
@@ -208,7 +206,6 @@ def get_presigned_url() -> Dict[str, Any]:
 @logger.inject_lambda_context(
     log_event=True, correlation_id_path=correlation_paths.API_GATEWAY_HTTP
 )
-@tracer.capture_lambda_handler
 def lambda_handler(
     event: Dict[str, Any], context: LambdaContext
 ) -> Dict[str, Any]:

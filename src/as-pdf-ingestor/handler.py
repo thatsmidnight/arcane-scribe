@@ -1,5 +1,5 @@
 # Third-Party
-from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.utilities.data_classes import S3Event, event_source
 
@@ -8,11 +8,9 @@ from pdf_ingestor import processor
 
 # Initialize Powertools
 logger = Logger()
-tracer = Tracer()
 
 
 @logger.inject_lambda_context(log_event=True)
-@tracer.capture_lambda_handler
 @event_source(data_class=S3Event)
 def lambda_handler(event: S3Event, context: LambdaContext) -> None:
     """

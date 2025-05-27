@@ -6,43 +6,52 @@ import shutil
 import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
-
-# Langchain components
 from langchain_community.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_aws import BedrockEmbeddings
 from langchain_community.vectorstores import FAISS
 
-# Initialize clients and models
-logger = Logger(service="pdf_ingestor_processor")
+# Initialize logger
+logger = Logger(service="pdf_ingestor_processor_bedrock")
 
-# Initialize Boto3 S3 client globally
+# Initialize Bedrock runtime client
 try:
     s3_client = boto3.client("s3")
+    bedrock_runtime_client = boto3.client(service_name="bedrock-runtime")
 except Exception as e:
     logger.exception(
-        f"Failed to initialize Boto3 S3 client in processor module: {e}"
+        f"Failed to initialize Boto3 clients in processor module: {e}"
     )
-    raise e
+    s3_client = None
+    bedrock_runtime_client = None
 
+# Get the Bedrock embedding model ID from environment variables or use a default
+BEDROCK_EMBEDDING_MODEL_ID = os.environ.get(
+    "BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0"
+)
+
+# Initialize the BedrockEmbeddings model
 try:
-    # Using a relatively lightweight sentence transformer model.
-    logger.info("Initializing HuggingFaceEmbeddings model...")
-    embedding_model = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    logger.info("HuggingFaceEmbeddings model initialized.")
+    logger.info(
+        f"Initializing BedrockEmbeddings model: {BEDROCK_EMBEDDING_MODEL_ID}"
+    )
+    embedding_model = BedrockEmbeddings(
+        client=bedrock_runtime_client, model_id=BEDROCK_EMBEDDING_MODEL_ID
+    )
+    logger.info("BedrockEmbeddings model initialized.")
 except Exception as e:
-    logger.exception(f"Failed to initialize HuggingFaceEmbeddings model: {e}")
-    raise e
+    logger.exception(f"Failed to initialize BedrockEmbeddings model: {e}")
+    embedding_model = None
 
-# Retrieve environment variables
+# Get the S3 bucket name for storing the FAISS index
 VECTOR_STORE_BUCKET_NAME = os.environ.get("VECTOR_STORE_BUCKET_NAME")
 
 
 def process_s3_object(
     bucket_name: str, object_key: str, lambda_logger: Logger
 ) -> None:
-    """Processes a PDF file from S3: loads, chunks, embeds, and stores its
-    vector representation.
+    """Process a PDF file from S3, generate embeddings using Bedrock,
+    and create a FAISS index. The FAISS index is then uploaded back to S3.
 
     Parameters
     ----------
@@ -51,112 +60,93 @@ def process_s3_object(
     object_key : str
         The key of the PDF file in the S3 bucket.
     lambda_logger : Logger
-        The logger instance for logging within the Lambda function.
+        The logger instance for logging messages.
 
     Raises
     -------
     RuntimeError
-        If critical components (S3 client or embedding model) fail to initialize.
+        If the S3 client, Bedrock client, or embedding model is not initialized.
     EnvironmentError
         If the VECTOR_STORE_BUCKET_NAME environment variable is not set.
     ClientError
-        If there is an error interacting with AWS services (e.g., S3).
-    FileNotFoundError
-        If the temporary PDF file cannot be found after download.
+        If there is an error interacting with AWS services.
     Exception
         For any other unexpected errors during processing.
     """
-    if not s3_client or not embedding_model:
+    # Validate that the necessary components are initialized
+    if not s3_client or not bedrock_runtime_client or not embedding_model:
         lambda_logger.error(
-            "Processor dependencies (S3 client or embedding model) not initialized."
+            "Processor dependencies (S3/Bedrock clients or embedding model) not initialized."
         )
-        # This indicates a problem during the module's cold start.
-        raise RuntimeError(
-            "Critical components (S3 client or embedding model) failed to initialize."
-        )
-
+        raise RuntimeError("Critical components failed to initialize.")
     if not VECTOR_STORE_BUCKET_NAME:
         lambda_logger.error(
             "VECTOR_STORE_BUCKET_NAME environment variable is not set."
         )
         raise EnvironmentError("VECTOR_STORE_BUCKET_NAME is not configured.")
 
-    # Sanitize object_key to create a safe base for temp file names
+    # Validate the bucket name and object key
     base_file_name = os.path.basename(object_key)
     safe_base_file_name = "".join(
         c if c.isalnum() or c in [".", "-"] else "_" for c in base_file_name
     )
     temp_pdf_path = f"/tmp/{safe_base_file_name}"
-
-    # FAISS saves a directory, so we just need a base name for the directory in /tmp
     temp_faiss_index_name = (
         f"{os.path.splitext(safe_base_file_name)[0]}_faiss_index"
     )
     temp_faiss_index_path = f"/tmp/{temp_faiss_index_name}"
 
     try:
-        # 1. Download PDF from source S3 to /tmp
+        # Download the PDF file from S3
         lambda_logger.info(
             f"Downloading s3://{bucket_name}/{object_key} to {temp_pdf_path}"
         )
         s3_client.download_file(bucket_name, object_key, temp_pdf_path)
         lambda_logger.info(f"Successfully downloaded PDF to {temp_pdf_path}")
 
-        # 2. Load PDF with Langchain Document Loader
+        # Load the PDF document using PyPDFLoader
         lambda_logger.info(
             f"Loading PDF document from {temp_pdf_path} using PyPDFLoader."
         )
         loader = PyPDFLoader(temp_pdf_path)
-        # Documents are loaded here. If PDF is password-protected or corrupted, this might fail.
         documents = loader.load()
         lambda_logger.info(
             f"Loaded {len(documents)} document pages/sections from PDF."
         )
-
         if not documents:
             lambda_logger.warning(
-                f"No documents were loaded from PDF: {object_key}. Skipping further processing."
+                f"No documents loaded from PDF: {object_key}."
             )
             return
 
-        # 3. Split documents into chunks
+        # Split the document into manageable text chunks
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200
         )
         texts = text_splitter.split_documents(documents)
         lambda_logger.info(f"Split into {len(texts)} text chunks.")
-
         if not texts:
-            lambda_logger.warning(
-                f"No text chunks were generated after splitting: {object_key}. Skipping."
-            )
+            lambda_logger.warning(f"No text chunks generated: {object_key}.")
             return
 
-        # 4. Generate embeddings and create FAISS vector store
+        # Generate embeddings for the text chunks using Bedrock
         lambda_logger.info(
-            "Generating embeddings and creating FAISS index. This may take some time..."
+            "Generating embeddings with Bedrock and creating FAISS index..."
         )
         vector_store = FAISS.from_documents(texts, embedding_model)
         lambda_logger.info("FAISS index created successfully in memory.")
 
-        # 5. Save FAISS index locally to /tmp
-        # FAISS.save_local saves two files (index.faiss, index.pkl) into the specified folder path.
-        if os.path.exists(
-            temp_faiss_index_path
-        ):  # Clean up if it exists from a previous failed run within same container
+        # Save the FAISS index to a temporary directory
+        if os.path.exists(temp_faiss_index_path):
             shutil.rmtree(temp_faiss_index_path)
-        os.makedirs(
-            temp_faiss_index_path, exist_ok=True
-        )  # Ensure directory exists
+        os.makedirs(temp_faiss_index_path, exist_ok=True)
         vector_store.save_local(folder_path=temp_faiss_index_path)
         lambda_logger.info(
             f"FAISS index saved locally to directory: {temp_faiss_index_path}"
         )
 
-        # 6. Upload FAISS index (contents of the directory) to the vector_store_bucket
-        # The S3 "key" for the index will be based on the original PDF's object key
-        s3_index_prefix = f"{os.path.splitext(object_key)[0]}/faiss_index"  # Store in a "folder" named after the PDF
-
+        # Upload the FAISS index files to S3
+        s3_index_prefix = f"{os.path.splitext(object_key)[0]}/faiss_index"
         for file_name_in_index_dir in os.listdir(temp_faiss_index_path):
             local_file_to_upload = os.path.join(
                 temp_faiss_index_path, file_name_in_index_dir
@@ -168,51 +158,35 @@ def process_s3_object(
             s3_client.upload_file(
                 local_file_to_upload, VECTOR_STORE_BUCKET_NAME, s3_target_key
             )
-            lambda_logger.info(
-                f"Successfully uploaded {file_name_in_index_dir}"
-            )
-
         lambda_logger.info(
-            f"FAISS index for {object_key} successfully uploaded to S3 bucket: "
-            f"{VECTOR_STORE_BUCKET_NAME} under prefix: {s3_index_prefix}"
+            f"FAISS index for {object_key} uploaded to S3: {VECTOR_STORE_BUCKET_NAME}/{s3_index_prefix}"
         )
 
+    # Handle specific AWS errors and log them
     except ClientError as e:
         lambda_logger.exception(
             f"AWS ClientError during processing of {object_key}: {e}"
-        )
-        raise  # Re-raise to allow Lambda to handle retry or dead-letter queue based on its config
-    except FileNotFoundError as e:  # e.g. if temp_pdf_path wasn't created
-        lambda_logger.exception(
-            f"FileNotFoundError during processing of {object_key}: {e}"
         )
         raise
     except Exception as e:
         lambda_logger.exception(
             f"Unexpected error during processing of {object_key}: {e}"
         )
-        raise  # Re-raise for visibility and retries
+        raise
     finally:
-        # 7. Clean up /tmp
+        # Clean up temporary files and directories
         if os.path.exists(temp_pdf_path):
             try:
                 os.remove(temp_pdf_path)
-                lambda_logger.info(
-                    f"Cleaned up temporary PDF file: {temp_pdf_path}"
-                )
-            except Exception as e_clean_pdf:
+            except Exception as e_clean:
                 lambda_logger.error(
-                    f"Error cleaning up PDF {temp_pdf_path}: {e_clean_pdf}"
+                    f"Error cleaning temp PDF {temp_pdf_path}: {e_clean}"
                 )
+        # Clean up the FAISS index directory
         if os.path.exists(temp_faiss_index_path):
             try:
-                shutil.rmtree(
-                    temp_faiss_index_path
-                )  # Recursively remove directory
-                lambda_logger.info(
-                    f"Cleaned up temporary FAISS index directory: {temp_faiss_index_path}"
-                )
-            except Exception as e_clean_faiss:
+                shutil.rmtree(temp_faiss_index_path)
+            except Exception as e_clean:
                 lambda_logger.error(
-                    f"Error cleaning up FAISS index dir {temp_faiss_index_path}: {e_clean_faiss}"
+                    f"Error cleaning temp FAISS dir {temp_faiss_index_path}: {e_clean}"
                 )

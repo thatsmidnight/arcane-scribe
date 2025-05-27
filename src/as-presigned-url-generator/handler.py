@@ -1,53 +1,27 @@
 # Standard Library
-import os
 import json
-import typing as t
-from dataclasses import dataclass, field
+from typing import Any, Dict
 
 # Third-Party
-import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
+# Local Folder
+from presigned_url_generator import processor
+from presigned_url_generator.data_classes import PresignedUrlRequest
+
 # Initialize Powertools
 tracer = Tracer()
 logger = Logger()
-app = APIGatewayHttpResolver()  # For HTTP APIs
-
-# Initialize Boto3 S3 client globally
-try:
-    s3_client = boto3.client("s3")
-except Exception as e:
-    logger.exception(f"Failed to initialize Boto3 S3 client globally: {e}")
-    raise e
-
-# Retrieve environment variables
-DOCUMENTS_BUCKET_NAME = os.environ.get("DOCUMENTS_BUCKET_NAME")
-if not DOCUMENTS_BUCKET_NAME:
-    logger.error("DOCUMENTS_BUCKET_NAME environment variable is not set.")
-    raise Exception(
-        "Environment variable DOCUMENTS_BUCKET_NAME must be set for S3 operations."
-    )
-
-
-# Define a dataclass for request body validation.
-@dataclass
-class PresignedUrlRequest:
-    file_name: str = field(
-        metadata={"description": "The name of the file to upload."}
-    )
-    content_type: t.Optional[str] = field(
-        default=None,
-        metadata={"description": "Optional content type for the file."},
-    )
+app = APIGatewayHttpResolver()
 
 
 @app.post("/srd/upload-url")
 @tracer.capture_method
-def get_presigned_url() -> t.Dict[str, t.Any]:
+def get_presigned_url() -> Dict[str, Any]:
     """
     Endpoint to generate a presigned URL for uploading files to S3.
 
@@ -62,8 +36,10 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
     dict
         A dictionary suitable for an API Gateway HTTP API response.
     """
+    content_type = None
+
     # Check if the global S3 client is initialized
-    if not s3_client:
+    if not processor.s3_client:
         logger.error("S3 client is not initialized.")
         return {
             "statusCode": 500,
@@ -74,7 +50,7 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
         }
 
     # Check if the DOCUMENTS_BUCKET_NAME global variable is set
-    if not DOCUMENTS_BUCKET_NAME:
+    if not processor.DOCUMENTS_BUCKET_NAME:
         logger.error("DOCUMENTS_BUCKET_NAME is not configured.")
         return {
             "statusCode": 500,
@@ -85,8 +61,10 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
         }
 
     try:
-        # Ensure the request body is a valid JSON object
+        # Parse the request body as JSON
         request_body = app.current_event.json_body
+
+        # Ensure the request body is a valid JSON object
         if not isinstance(request_body, dict):
             # This case handles if the body is not JSON or is malformed before parsing
             logger.warning(
@@ -109,9 +87,7 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
             ) or "'file_name' was not found" in str(e):
                 error_message = "Invalid request payload: 'file_name' is a required field."
             else:
-                error_message = (
-                    f"Invalid request payload: {e}. Ensure only 'file_name' and optional 'content_type' are provided."
-                )
+                error_message = f"Invalid request payload: {e}. Ensure only 'file_name' and optional 'content_type' are provided."
             return {
                 "statusCode": 400,
                 "headers": {"Content-Type": "application/json"},
@@ -179,42 +155,31 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
             "body": json.dumps({"error": "Error processing request data."}),
         }
 
-    # Proceed with S3 pre-signed URL generation using validated 'file_name' and 'content_type'
-    s3_key = file_name
-
-    params = {
-        "Bucket": DOCUMENTS_BUCKET_NAME,
-        "Key": s3_key,
-    }
-    # If content_type is not None (and it's a string due to validation)
-    if content_type:
-        params["ContentType"] = content_type
-        logger.info(
-            f"Client specified ContentType: {content_type} for key: {s3_key}"
-        )
-
-    # Set expiration time for the presigned URL to 15 minutes
-    expiration_seconds = 900
-
+    # Generate the presigned URL
+    content_type = (
+        content_type or "application/pdf"
+    )  # Default to PDF if not provided
+    expiration_seconds = 900  # 15 minutes
     try:
         logger.info(
-            f"Generating presigned URL for bucket: {DOCUMENTS_BUCKET_NAME}, key: {s3_key}"
+            f"Generating presigned URL for bucket: {processor.DOCUMENTS_BUCKET_NAME}, key: {file_name}"
         )
-        presigned_url = s3_client.generate_presigned_url(
-            ClientMethod="put_object",
-            Params=params,
-            ExpiresIn=expiration_seconds,
-            HttpMethod="PUT",
+        presigned_url = processor.generate_presigned_url(
+            file_name=file_name,
+            content_type=content_type,
+            expiration=expiration_seconds,
         )
-        logger.info(f"Successfully generated presigned URL for key: {s3_key}")
+        logger.info(
+            f"Successfully generated presigned URL for key: {file_name}"
+        )
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
             "body": json.dumps(
                 {
                     "presigned_url": presigned_url,
-                    "bucket_name": DOCUMENTS_BUCKET_NAME,
-                    "key": s3_key,
+                    "bucket_name": processor.DOCUMENTS_BUCKET_NAME,
+                    "key": file_name,
                     "expires_in": expiration_seconds,
                     "method": "PUT",
                 }
@@ -222,7 +187,7 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
         }
     except ClientError as e:
         logger.exception(
-            f"Boto3 ClientError generating presigned URL for key {s3_key}: {e}"
+            f"Boto3 ClientError generating presigned URL for key {file_name}: {e}"
         )
         return {
             "statusCode": 500,
@@ -231,7 +196,7 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
         }
     except Exception as e:
         logger.exception(
-            f"Unexpected error generating presigned URL for key {s3_key}: {e}"
+            f"Unexpected error generating presigned URL for key {file_name}: {e}"
         )
         return {
             "statusCode": 500,
@@ -241,18 +206,19 @@ def get_presigned_url() -> t.Dict[str, t.Any]:
 
 
 @logger.inject_lambda_context(
-    log_event=True,
-    correlation_id_path=correlation_paths.API_GATEWAY_HTTP,
+    log_event=True, correlation_id_path=correlation_paths.API_GATEWAY_HTTP
 )
 @tracer.capture_lambda_handler
-def lambda_handler(event: dict, context: LambdaContext) -> dict:
+def lambda_handler(
+    event: Dict[str, Any], context: LambdaContext
+) -> Dict[str, Any]:
     """
     Lambda function handler to process API Gateway HTTP API events for
     generating presigned URLs for S3 uploads.
 
     Parameters
     ----------
-    event : dict
+    event : Dict[str, Any]
         The event data from API Gateway, containing the HTTP request details.
     context : LambdaContext
         The context object providing runtime information about the Lambda
@@ -260,7 +226,7 @@ def lambda_handler(event: dict, context: LambdaContext) -> dict:
 
     Returns
     -------
-    dict
+    Dict[str, Any]
         A dictionary containing the HTTP response with a presigned URL or an
         error message.
     """

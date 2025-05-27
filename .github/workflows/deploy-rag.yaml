@@ -89,7 +89,7 @@ jobs:
           poetry run isort --check src/
 
       - name: Run tests
-        run: nox
+        run: poetry run nox
 
       - name: CDK Synth
         run: poetry run cdk synth --context stack-suffix=${{ env.STACK_SUFFIX }} -q

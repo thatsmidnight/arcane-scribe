@@ -1,8 +1,8 @@
 {
-  "app": "poetry run python3 app.py",
+  "app": "python3 app.py",
   "watch": {
     "include": [
-      "**"
+      "app.py", "cdk/**"
     ],
     "exclude": [
       "README.md",

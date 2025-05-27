@@ -18,7 +18,6 @@
     "@aws-cdk/aws-lambda:recognizeVersionProps": true,
     "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
     "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
-    "@aws-cdk/aws-s3:grantWriteWithoutAcl": true,
     "@aws-cdk/aws-iam:minimizePolicies": true,
     "@aws-cdk/core:stackRelativeExports": true,
     "@aws-cdk/core:bootstrapQualifier": "arcaneqs",

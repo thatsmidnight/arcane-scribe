@@ -21,10 +21,34 @@ class CustomLambda(Construct):
         memory_size: Optional[int] = 512,
         timeout: Optional[Duration] = Duration.seconds(30),
         environment: Optional[dict] = None,
-        layers: List[_lambda.ILayerVersion] = None,
+        layers: Optional[List[_lambda.ILayerVersion]] = None,
         initial_policy: Optional[List[iam.PolicyStatement]] = None,
         **kwargs,
     ) -> None:
+        """Custom Lambda Construct for AWS CDK.
+
+        Parameters
+        ----------
+        scope : Construct
+            The scope in which this construct is defined.
+        id : str
+            The ID of the construct.
+        src_folder_path : str
+            Path to the source folder containing the Lambda function code.
+        stack_suffix : Optional[str], optional
+            Suffix to append to the Lambda function name, by default ""
+        memory_size : Optional[int], optional
+            Memory size for the Lambda function in MB, by default 512
+        timeout : Optional[Duration], optional
+            Timeout for the Lambda function, by default Duration.seconds(30)
+        environment : Optional[dict], optional
+            Environment variables for the Lambda function, by default None
+        layers : Optional[List[_lambda.ILayerVersion]], optional
+            List of Lambda layers to attach to the function, by default None
+        initial_policy : Optional[List[iam.PolicyStatement]], optional
+            Initial IAM policy statements to attach to the Lambda function,
+            by default None
+        """
         super().__init__(scope, id, **kwargs)
 
         # Set variables for Lambda function

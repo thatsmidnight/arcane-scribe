@@ -19,6 +19,29 @@ class CustomDynamoDBTable(Construct):
         time_to_live_attribute: Optional[str] = None,
         **kwargs,
     ) -> None:
+        """Custom DynamoDB Table Construct for AWS CDK.
+
+        Parameters
+        ----------
+        scope : Construct
+            The scope in which this construct is defined.
+        id : str
+            The ID of the construct.
+        name : str
+            The name of the DynamoDB table.
+        partition_key : dynamodb.Attribute
+            The partition key for the DynamoDB table.
+        stack_suffix : Optional[str], optional
+            Suffix to append to the DynamoDB table name, by default ""
+        sort_key : Optional[dynamodb.Attribute], optional
+            The sort key for the DynamoDB table, by default None
+        removal_policy : Optional[RemovalPolicy], optional
+            The removal policy for the DynamoDB table, by default
+            RemovalPolicy.DESTROY
+        time_to_live_attribute : Optional[str], optional
+            The attribute name for time to live (TTL) in the DynamoDB table,
+            by default None (no TTL configured)
+        """
         super().__init__(scope, id, **kwargs)
 
         # Append stack suffix to name if provided

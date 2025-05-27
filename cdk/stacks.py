@@ -40,6 +40,17 @@ class ArcaneScribeStack(Stack):
         stack_suffix: Optional[str] = "",
         **kwargs,
     ) -> None:
+        """Arcane Scribe Stack for AWS CDK.
+
+        Parameters
+        ----------
+        scope : Construct
+            The scope in which this construct is defined.
+        construct_id : str
+            The ID of the construct.
+        stack_suffix : Optional[str], optional
+            Suffix to append to resource names for this stack, by default ""
+        """
         super().__init__(scope, construct_id, **kwargs)
 
         # region S3 Buckets

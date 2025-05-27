@@ -1,9 +1,6 @@
 # Standard Library
 from dataclasses import is_dataclass
 
-# Third-Party
-import pytest
-
 # Local Folder
 from presigned_url_generator.data_classes import PresignedUrlRequest
 

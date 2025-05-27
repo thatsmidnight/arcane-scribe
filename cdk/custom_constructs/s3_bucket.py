@@ -18,6 +18,25 @@ class CustomS3Bucket(Construct):
         event_bridge_enabled: Optional[bool] = False,
         **kwargs,
     ) -> None:
+        """Custom S3 Bucket Construct for AWS CDK.
+
+        Parameters
+        ----------
+        scope : Construct
+            The scope in which this construct is defined.
+        id : str
+            The ID of the construct.
+        name : str
+            The name of the S3 bucket.
+        stack_suffix : Optional[str], optional
+            Suffix to append to the S3 bucket name, by default ""
+        versioned : Optional[bool], optional
+            Whether the S3 bucket should be versioned, by default False
+        lifecycle_rules : Optional[List[s3.LifecycleRule]], optional
+            Lifecycle rules for the S3 bucket, by default None
+        event_bridge_enabled : Optional[bool], optional
+            Whether to enable EventBridge for the S3 bucket, by default False
+        """
         super().__init__(scope, id, **kwargs)
 
         # Append stack suffix to name if provided

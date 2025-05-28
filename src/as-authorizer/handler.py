@@ -2,7 +2,6 @@
 import os
 
 # Third Party
-# Third-Party
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
 

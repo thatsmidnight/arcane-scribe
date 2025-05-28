@@ -3,7 +3,6 @@ import json
 from typing import Any, Dict
 
 # Third Party
-# Third-Party
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.logging import correlation_paths
@@ -11,7 +10,6 @@ from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
 # Local Modules
-# Local Folder
 from presigned_url_generator import processor
 from presigned_url_generator.data_classes import PresignedUrlRequest
 

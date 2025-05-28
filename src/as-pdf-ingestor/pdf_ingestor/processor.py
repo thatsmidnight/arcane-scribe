@@ -3,7 +3,6 @@ import os
 import shutil
 
 # Third Party
-# Third-Party
 import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger

@@ -3,14 +3,12 @@ import json
 from typing import Any, Dict
 
 # Third Party
-# Third-Party
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.event_handler import APIGatewayHttpResolver
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
 
 # Local Modules
-# Local Folder
 from rag_query_processor import processor
 
 # Initialize Powertools

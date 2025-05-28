@@ -6,7 +6,6 @@ import hashlib
 from typing import Optional, Dict, Any
 
 # Third Party
-# Third-Party
 import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger

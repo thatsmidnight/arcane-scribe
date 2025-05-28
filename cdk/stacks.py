@@ -52,6 +52,31 @@ class ArcaneScribeStack(Stack):
             Suffix to append to resource names for this stack, by default ""
         """
         super().__init__(scope, construct_id, **kwargs)
+        self.stack_suffix = "-" + stack_suffix if stack_suffix else ""
+
+        # region Authorization Header and Secret
+        # Retrieve context variables passed from CDK CLI
+        auth_header_name_from_context = self.node.try_get_context(
+            "authorizer_header_name"
+        )
+        auth_secret_value_from_context = self.node.try_get_context(
+            "authorizer_secret_value"
+        )
+
+        if not auth_secret_value_from_context:
+            # Fail deployment if the secret value isn't provided, especially for non-local scenarios.
+            # For local dev, cdk.json might provide a default, but CI should always pass it.
+            raise ValueError(
+                "CRITICAL: 'authorizer_secret_value' context variable must be provided for deployment."
+            )
+
+        # Use a default if the header name context variable isn't provided.
+        # This matches the default in the GitHub Actions workflow.
+        final_auth_header_name = (
+            auth_header_name_from_context if auth_header_name_from_context
+            else "X-Custom-Auth-Token"
+        )
+        # endregion
 
         # region S3 Buckets
         # Bucket for storing uploaded PDF documents
@@ -59,7 +84,7 @@ class ArcaneScribeStack(Stack):
             self,
             "DocumentsBucket",
             name="arcane-scribe-documents",
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             versioned=True,
         )
         self.documents_bucket = documents_bucket.bucket
@@ -69,7 +94,7 @@ class ArcaneScribeStack(Stack):
             self,
             "VectorStoreBucket",
             name="arcane-scribe-vector-store",
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             versioned=True,
         )
         self.vector_store_bucket = vector_store_bucket.bucket
@@ -84,7 +109,7 @@ class ArcaneScribeStack(Stack):
             partition_key=dynamodb.Attribute(
                 name="query_hash", type=dynamodb.AttributeType.STRING
             ),
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             time_to_live_attribute="ttl",
         )
         self.query_cache_table = query_cache_table.table
@@ -109,7 +134,7 @@ class ArcaneScribeStack(Stack):
             self,
             "PresignedUrlLambda",
             src_folder_path="as-presigned-url-generator",
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             environment={
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name
             },
@@ -128,7 +153,7 @@ class ArcaneScribeStack(Stack):
             self,
             "PdfIngestorLambda",
             src_folder_path="as-pdf-ingestor",
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -158,7 +183,7 @@ class ArcaneScribeStack(Stack):
             self,
             "RagQueryLambda",
             src_folder_path="as-rag-query",
-            stack_suffix=stack_suffix,
+            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -182,6 +207,16 @@ class ArcaneScribeStack(Stack):
 
         # Grant DynamoDB permissions for the RAG query Lambda
         self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
+
+        authorizer_lambda = CustomLambda(
+            self, "MyCustomAuthorizerLambda",
+            src_folder_path="custom-authorizer",
+            environment={
+                "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
+                "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
+            }
+        )
+        self.authorizer_lambda = authorizer_lambda.function
         # endregion
 
         # region API Gateway
@@ -189,7 +224,7 @@ class ArcaneScribeStack(Stack):
         http_api = apigwv2.HttpApi(
             self,
             "ArcaneScribeHttpApi",
-            api_name=f"ArcaneScribeHttpApi-{stack_suffix}",
+            api_name=f"ArcaneScribeHttpApi{self.stack_suffix}",
             cors_preflight=apigwv2.CorsPreflightOptions(
                 allow_origins=["*"],  # Adjust as needed for security
                 allow_methods=[
@@ -211,6 +246,18 @@ class ArcaneScribeStack(Stack):
             ),
         )
 
+        # Create an authorizer for the HTTP API
+        http_lambda_authorizer = apigwv2.HttpAuthorizer(
+            self,
+            "ArcaneScribeHttpLambdaAuthorizer",
+            http_api=http_api,
+            identity_source=[final_auth_header_name],
+            type=apigwv2.HttpAuthorizerType.LAMBDA,
+            authorizer_name=f"ArcaneScribeHttpLambdaAuthorizer{self.stack_suffix}",
+            authorizer_uri=self.authorizer_lambda.function_arn,
+            enable_simple_responses=True,
+        )
+
         # Integration for pre-signed URL generation
         presigned_url_integration = (
             apigwv2_integrations.HttpLambdaIntegration(
@@ -224,6 +271,7 @@ class ArcaneScribeStack(Stack):
             path="/srd/upload-url",
             methods=[apigwv2.HttpMethod.POST],
             integration=presigned_url_integration,
+            authorizer=http_lambda_authorizer,
         )
 
         # Integration for RAG queries
@@ -237,5 +285,6 @@ class ArcaneScribeStack(Stack):
             path="/query",
             methods=[apigwv2.HttpMethod.POST],
             integration=rag_query_integration,
+            authorizer=http_lambda_authorizer,
         )
         # endregion

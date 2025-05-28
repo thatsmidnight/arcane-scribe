@@ -212,7 +212,7 @@ class ArcaneScribeStack(Stack):
 
         authorizer_lambda = CustomLambda(
             self,
-            "MyCustomAuthorizerLambda",
+            "ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
@@ -252,9 +252,9 @@ class ArcaneScribeStack(Stack):
 
         # Create an authorizer for the HTTP API
         http_lambda_authorizer = apigwv2_authorizers.HttpLambdaAuthorizer(
-            "ArcaneScribHttpLambdaAuthorizer",
+            "ArcaneScribeHttpLambdaAuthorizer",
             handler=self.authorizer_lambda,
-            authorizer_name=f"ArcaneScribHttpLambdaAuthorizer{self.stack_suffix}",
+            authorizer_name=f"ArcaneScribeHttpLambdaAuthorizer{self.stack_suffix}",
             response_types=[apigwv2_authorizers.HttpLambdaResponseType.SIMPLE],
             identity_source=[f"$request.header.{final_auth_header_name}"],
         )

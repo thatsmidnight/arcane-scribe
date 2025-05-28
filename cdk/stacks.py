@@ -244,6 +244,7 @@ class ArcaneScribeStack(Stack):
                     "X-Amz-User-Agent",
                     "X-File-Name",
                     "X-File-Type",
+                    final_auth_header_name,  # Custom auth header
                 ],
                 max_age=Duration.days(1),
             ),

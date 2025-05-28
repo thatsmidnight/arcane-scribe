@@ -45,41 +45,16 @@ build-backend = "poetry.core.masonry.api"
 export = "poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt"
 test-unit = "poetry run pytest -s --cov-report term-missing --cov=. tests/unit"
 
-[tool.black]
-line-length = 78
-target-version = ['py312']
-skip-string-normalization = false
-preview = true
-
-[tool.isort]
-profile = "black"
-py_version = 312
-line_length = 79
-wrap_length = 78
-only_sections = true
-import_heading_stdlib = "Standard Library"
-import_heading_future = "Future"
-import_heading_firstparty = "First-Party"
-import_heading_thirdparty = "Third-Party"
-import_heading_localfolder = "Local Folder"
-known_localfolder = "cdk,rag_query_processor,pdf_ingestor,presigned_url_generator,tests"
-multi_line_output = 5
-virtual_env = ".venv"
-include_trailing_comma = true
-use_parentheses = true
-group_by_package = true
-combine_straight_imports = false
-combine_as_imports = true
-
 [tool.coverage.run]
 branch = true
-source = ["models", "services", "utils", "app.py"]
+source = ["src"]
 omit = [
     "app.py",
     "cdk/*",
     "tests/*",
     "dev_test_harness.py",
-    "noxfile.py"
+    "noxfile.py",
+    "**/__init__.py"
 ]
 
 [tool.coverage.report]
@@ -97,3 +72,57 @@ exclude_also = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
+omit = [
+    "**/__init__.py",
+    "**/context.py",
+    "**/tests/*",
+    "**/__future/*",
+    "**/noxfile.py",
+    "**/setup.py",
+    "**/dev_test_harness.py",
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+pythonpath = ["src"]
+addopts = "-ra -sql --junitxml=junit.xml"
+markers = [
+    "slow: marks tests as slow (select with '-m \"not slow\"')",
+    "serial"
+]
+testpaths = [
+    "tests/unit",
+    "tests/integration"
+]
+
+[tool.black]
+line-length = 79
+target-version = ["py312"]
+extend-exclude = '''
+/(
+    |  .*\/deps\/*  # Exclude dependencies
+)/
+'''
+
+[tool.isort]
+profile = "black"
+py_version = 312
+line_length = 79
+wrap_length = 0
+multi_line_output = 3
+use_parentheses = true
+combine_as_imports = true
+include_trailing_comma = true
+group_by_package = true
+length_sort = true
+atomic = true
+only_sections = true
+import_heading_future = "Future"
+import_heading_stdlib = "Standard Library"
+import_heading_firstparty = "My Modules"
+import_heading_thirdparty = "Third Party"
+import_heading_localfolder = "Local Modules"
+known_localfolder = "cdk,rag_query_processor,pdf_ingestor,presigned_url_generator,tests"
+virtual_env = ".venv"
+skip = [".layer", ".nox", ".venv", "cdk.out"]
+src_paths = ["src", "cdk", "tests"]

@@ -20,7 +20,7 @@ from constructs import Construct
 
 # Local Modules
 from cdk.custom_constructs.s3_bucket import CustomS3Bucket
-from cdk.custom_constructs.lamdba_function import CustomLambda
+from cdk.custom_constructs.lambda_function import CustomLambda
 from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
 from cdk.custom_constructs.iam_policy_statement import (
     CustomIAMPolicyStatement,

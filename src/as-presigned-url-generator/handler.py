@@ -83,7 +83,9 @@ def get_presigned_url() -> Dict[str, Any]:
             if "required positional argument: 'file_name'" in str(
                 e
             ) or "'file_name' was not found" in str(e):
-                error_message = "Invalid request payload: 'file_name' is a required field."
+                error_message = (
+                    "Invalid request payload: 'file_name' is a required field."
+                )
             else:
                 error_message = f"Invalid request payload: {e}. Ensure only 'file_name' and optional 'content_type' are provided."
             return {

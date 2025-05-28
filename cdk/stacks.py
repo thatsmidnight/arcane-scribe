@@ -74,7 +74,8 @@ class ArcaneScribeStack(Stack):
         # Use a default if the header name context variable isn't provided.
         # This matches the default in the GitHub Actions workflow.
         final_auth_header_name = (
-            auth_header_name_from_context if auth_header_name_from_context
+            auth_header_name_from_context
+            if auth_header_name_from_context
             else "X-Custom-Auth-Token"
         )
         # endregion
@@ -210,12 +211,13 @@ class ArcaneScribeStack(Stack):
         self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
 
         authorizer_lambda = CustomLambda(
-            self, "MyCustomAuthorizerLambda",
+            self,
+            "MyCustomAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
                 "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
-            }
+            },
         )
         self.authorizer_lambda = authorizer_lambda.function
         # endregion
@@ -257,11 +259,9 @@ class ArcaneScribeStack(Stack):
         )
 
         # Integration for pre-signed URL generation
-        presigned_url_integration = (
-            apigwv2_integrations.HttpLambdaIntegration(
-                "PresignedUrlIntegration",
-                handler=self.presigned_url_lambda,
-            )
+        presigned_url_integration = apigwv2_integrations.HttpLambdaIntegration(
+            "PresignedUrlIntegration",
+            handler=self.presigned_url_lambda,
         )
 
         # Add a route for pre-signed URL generation

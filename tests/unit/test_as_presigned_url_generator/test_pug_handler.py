@@ -71,7 +71,9 @@ class TestHandler:
             invoked_function_arn="arn:aws:lambda:us-east-1:123456789012:function:test_function",
         )
 
-    def test_lambda_handler_success(self, handler, mock_app, sample_context, monkeypatch: MonkeyPatch):
+    def test_lambda_handler_success(
+        self, handler, mock_app, sample_context, monkeypatch: MonkeyPatch
+    ):
         """Test successful lambda_handler execution."""
         with monkeypatch.context() as m:
             m.setenv("DOCUMENTS_BUCKET_NAME", "test-bucket")
@@ -100,7 +102,12 @@ class TestHandler:
             )
 
     def test_get_presigned_url_success(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test successful presigned URL generation."""
         with monkeypatch.context() as m:
@@ -124,7 +131,12 @@ class TestHandler:
             )
 
     def test_get_presigned_url_with_custom_content_type(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test presigned URL generation with custom content type."""
         with monkeypatch.context() as m:
@@ -174,7 +186,9 @@ class TestHandler:
             error_message = json.loads(result["body"])["error"]
             assert "Bucket not configured" in error_message
 
-    def test_get_presigned_url_invalid_request_body(self, handler, mock_app, monkeypatch: MonkeyPatch):
+    def test_get_presigned_url_invalid_request_body(
+        self, handler, mock_app, monkeypatch: MonkeyPatch
+    ):
         """Test error handling with non-dict request body."""
         with monkeypatch.context() as m:
             m.setenv("DOCUMENTS_BUCKET_NAME", "test-bucket")
@@ -206,7 +220,12 @@ class TestHandler:
                 assert "'file_name' is a required field" in error_message
 
     def test_get_presigned_url_empty_file_name(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test validation for empty file_name."""
         with monkeypatch.context() as m:
@@ -220,7 +239,12 @@ class TestHandler:
             assert "non-empty string" in error_message
 
     def test_get_presigned_url_invalid_content_type(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test validation for non-string content_type."""
         with monkeypatch.context() as m:
@@ -268,7 +292,12 @@ class TestHandler:
                 )
 
     def test_get_presigned_url_client_error(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test error handling with boto3 ClientError."""
         with monkeypatch.context() as m:
@@ -287,7 +316,12 @@ class TestHandler:
             )
 
     def test_get_presigned_url_unexpected_error(
-        self, handler, mock_app, mock_processor, mock_presigned_url_request, monkeypatch: MonkeyPatch
+        self,
+        handler,
+        mock_app,
+        mock_processor,
+        mock_presigned_url_request,
+        monkeypatch: MonkeyPatch,
     ):
         """Test error handling with unexpected exception during URL generation."""
         with monkeypatch.context() as m:

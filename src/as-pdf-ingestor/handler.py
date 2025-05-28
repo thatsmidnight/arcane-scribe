@@ -54,9 +54,7 @@ def lambda_handler(event: S3Event, context: LambdaContext) -> None:
         # Basic check to avoid processing non-PDF files if the S3 trigger is too broad
         # (though our CDK config filters for .pdf suffix)
         if not object_key.lower().endswith(".pdf"):
-            logger.warning(
-                f"Object {object_key} is not a PDF file. Skipping."
-            )
+            logger.warning(f"Object {object_key} is not a PDF file. Skipping.")
             continue
 
         try:

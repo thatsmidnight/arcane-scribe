@@ -6,6 +6,7 @@ from aws_cdk import (
     Stack,
     aws_apigatewayv2 as apigwv2,
     aws_apigatewayv2_integrations as apigwv2_integrations,
+    aws_apigatewayv2_authorizers as apigwv2_authorizers,
     aws_s3_notifications as s3n,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
@@ -247,15 +248,12 @@ class ArcaneScribeStack(Stack):
         )
 
         # Create an authorizer for the HTTP API
-        http_lambda_authorizer = apigwv2.HttpAuthorizer(
-            self,
-            "ArcaneScribeHttpLambdaAuthorizer",
-            http_api=http_api,
-            identity_source=[final_auth_header_name],
-            type=apigwv2.HttpAuthorizerType.LAMBDA,
-            authorizer_name=f"ArcaneScribeHttpLambdaAuthorizer{self.stack_suffix}",
-            authorizer_uri=self.authorizer_lambda.function_arn,
-            enable_simple_responses=True,
+        http_lambda_authorizer = apigwv2_authorizers.HttpLambdaAuthorizer(
+            "ArcaneScribHttpLambdaAuthorizer",
+            handler=self.authorizer_lambda,
+            authorizer_name=f"ArcaneScribHttpLambdaAuthorizer{self.stack_suffix}",
+            response_types=[apigwv2_authorizers.HttpLambdaResponseType.SIMPLE],
+            identity_source=[f"$request.header.{final_auth_header_name}"],
         )
 
         # Integration for pre-signed URL generation

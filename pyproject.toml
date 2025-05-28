@@ -77,7 +77,9 @@ source = ["models", "services", "utils", "app.py"]
 omit = [
     "app.py",
     "cdk/*",
-    "tests/*"
+    "tests/*",
+    "dev_test_harness.py",
+    "noxfile.py"
 ]
 
 [tool.coverage.report]

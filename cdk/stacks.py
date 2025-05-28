@@ -1,7 +1,7 @@
 # Standard Library
 from typing import Optional
 
-# Third-Party
+# Third Party
 from aws_cdk import (
     Stack,
     aws_apigatewayv2 as apigwv2,
@@ -10,11 +10,15 @@ from aws_cdk import (
     aws_s3_notifications as s3n,
     aws_dynamodb as dynamodb,
     aws_s3 as s3,
+    aws_route53 as route53,
+    aws_route53_targets as targets,
+    aws_certificatemanager as acm,
     Duration,
+    CfnOutput,
 )
 from constructs import Construct
 
-# Local Folder
+# Local Modules
 from cdk.custom_constructs.s3_bucket import CustomS3Bucket
 from cdk.custom_constructs.lamdba_function import CustomLambda
 from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
@@ -53,7 +57,17 @@ class ArcaneScribeStack(Stack):
             Suffix to append to resource names for this stack, by default ""
         """
         super().__init__(scope, construct_id, **kwargs)
-        self.stack_suffix = "-" + stack_suffix if stack_suffix else ""
+
+        # region Stack Suffix and Subdomain Configuration
+        self.stack_suffix = (
+            "-" + stack_suffix if stack_suffix else ""
+        ).lower()
+        self.base_domain_name = "thatsmidnight.com"
+        self.subdomain_part = f"arcane-scribe{self.stack_suffix}"
+        self.full_subdomain_name = (
+            f"{self.subdomain_part}.{self.base_domain_name}"
+        )
+        # endregion
 
         # region Authorization Header and Secret
         # Retrieve context variables passed from CDK CLI
@@ -285,5 +299,66 @@ class ArcaneScribeStack(Stack):
             methods=[apigwv2.HttpMethod.POST],
             integration=rag_query_integration,
             authorizer=http_lambda_authorizer,
+        )
+        # endregion
+
+        # region Custom Domain Setup for API Gateway
+        # 1. Look up existing hosted zone for "thatsmidnight.com"
+        hosted_zone = route53.HostedZone.from_lookup(
+            self, "ArcaneScribeHostedZone", domain_name=self.base_domain_name
+        )
+
+        # 2. Create an ACM certificate for subdomain with DNS validation
+        api_certificate = acm.Certificate(
+            self,
+            "ApiCertificate",
+            domain_name=self.full_subdomain_name,
+            validation=acm.CertificateValidation.from_dns(hosted_zone),
+        )
+
+        # 3. Create the API Gateway Custom Domain Name resource
+        apigw_custom_domain = apigwv2.DomainName(
+            self,
+            "ApiCustomDomain",
+            domain_name=self.full_subdomain_name,
+            certificate=api_certificate,
+        )
+
+        # 4. Map HTTP API to this custom domain
+        default_stage = http_api.default_stage
+        if not default_stage:
+            raise ValueError(
+                "Default stage could not be found for API mapping. Ensure API has a default stage or specify one."
+            )
+
+        _ = apigwv2.ApiMapping(
+            self,
+            "ApiMapping",
+            api=http_api,
+            domain_name=apigw_custom_domain,
+            stage=default_stage,  # Use the actual default stage object
+        )
+
+        # 5. Create the Route 53 Alias Record pointing to the API Gateway custom domain
+        route53.ARecord(
+            self,
+            "ApiAliasRecord",
+            zone=hosted_zone,
+            record_name=self.subdomain_part,  # e.g., "arcane-scribe" or "arcane-scribe-dev"
+            target=route53.RecordTarget.from_alias(
+                targets.ApiGatewayv2DomainProperties(
+                    regional_domain_name=apigw_custom_domain.regional_domain_name,
+                    regional_hosted_zone_id=apigw_custom_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
+
+        # 6. Output the custom API URL
+        CfnOutput(
+            self,
+            "CustomApiUrlOutput",
+            value=f"https://{self.full_subdomain_name}",
+            description="Custom API URL for Arcane Scribe",
+            export_name=f"ArcaneScribeCustomApiUrl{self.stack_suffix}",
         )
         # endregion

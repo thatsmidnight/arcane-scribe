@@ -3,5 +3,5 @@ boto3~=1.38.23
 langchain~=0.3.25
 langchain-community~=0.3.24
 langchain-aws~=0.2.23
-pymupdf~=1.26.0
+pypdf~=5.5.0
 faiss-cpu~=1.11.0

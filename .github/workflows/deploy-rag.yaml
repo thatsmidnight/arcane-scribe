@@ -120,8 +120,8 @@ jobs:
       - name: CDK Synth
         run: poetry run cdk synth \
           --context stack-suffix=${{ env.STACK_SUFFIX }} \
-          authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-          authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} -q
+          --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
+          --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} -q
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
@@ -129,8 +129,8 @@ jobs:
       - name: CDK Deploy
         run: poetry run cdk deploy --all --require-approval never \
           --context stack-suffix=${{ env.STACK_SUFFIX }} \
-          authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-          authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+          --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
+          --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}

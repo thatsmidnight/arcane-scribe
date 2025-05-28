@@ -1,6 +1,6 @@
 """Nox configuration file for running tests, linting, and type checking.
 
-This file is used to define the sessions that Nox will run. Nox is a Pyton
+This file is used to define the sessions that Nox will run. Nox is a Python
 automation tool that allows you to run tests, linters, and other tasks in
 isolated virtual environments.
 

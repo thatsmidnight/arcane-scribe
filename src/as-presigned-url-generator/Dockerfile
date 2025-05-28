@@ -6,7 +6,7 @@ ENV LAMBDA_TASK_ROOT=/var/task
 
 # Copy function code
 COPY handler.py ${LAMBDA_TASK_ROOT}/
-COPY presigned_url_generator/ ${LAMBDA_TASK_ROOT}/
+ADD presigned_url_generator/ ${LAMBDA_TASK_ROOT}/presigned_url_generator
 
 # Install dependencies from requirements.txt directly into LAMBDA_TASK_ROOT
 COPY requirements.txt ${LAMBDA_TASK_ROOT}/

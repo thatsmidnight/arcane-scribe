@@ -5,7 +5,7 @@ ENV LAMBDA_TASK_ROOT=/var/task
 
 # Copy function code
 COPY handler.py ${LAMBDA_TASK_ROOT}/
-COPY pdf_ingestor/ ${LAMBDA_TASK_ROOT}/
+ADD pdf_ingestor/ ${LAMBDA_TASK_ROOT}/pdf_ingestor
 
 # Install dependencies from requirements.txt
 COPY requirements.txt ${LAMBDA_TASK_ROOT}/

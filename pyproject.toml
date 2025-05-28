@@ -16,13 +16,13 @@ packages = [
 python = "~3.12"
 requests = "^2.32.3"
 faiss-cpu = "^1.11.0"
-boto3 = "^1.38.23"
+boto3 = "^1.38.25"
 langchain = "^0.3.25"
 aws-cdk-lib = "^2.199.0"
 aws-lambda-powertools = "^3.13.0"
 constructs = "^10.4.2"
 langchain-community = "^0.3.24"
-langchain-aws = "^0.2.23"
+langchain-aws = "^0.2.24"
 pypdf = "^5.5.0"
 
 [tool.poetry.group.dev.dependencies]

@@ -18,6 +18,30 @@ app = APIGatewayHttpResolver()
 
 @app.post("/query")
 def query_endpoint() -> Dict[str, Any]:
+    """
+    Endpoint to process a query against the RAG processor.
+
+    The request body should be a JSON object with the following structure:
+    {
+        "query_text": "Your query text here",
+        "srd_id": "Optional SRD ID, defaults to processor.DEFAULT_SRD_ID",
+        "invoke_generative_llm": true | false
+    }
+
+    - Required: `{"query_text": "What is the capital of France?"}`
+    - Optional: `{"query_text": "What is the capital of France?", "srd_id": "my_srd_id", "invoke_generative_llm": true}`
+
+    Returns
+    -------
+    Dict[str, Any]
+        A dictionary suitable for an API Gateway HTTP API response.
+
+    Raises
+    ------
+    ValueError
+        If the request body is not a valid JSON object or if required fields
+        are missing or invalid.
+    """
     try:
         # Initialize Boto3 clients and embedding model
         if (

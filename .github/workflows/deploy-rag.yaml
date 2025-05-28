@@ -118,10 +118,10 @@ jobs:
       # CDK Commands
       # ------------------------------
       - name: CDK Synth
-        run: poetry run cdk synth -q \
+        run: poetry run cdk synth \
           --context stack-suffix=${{ env.STACK_SUFFIX }} \
           authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-          authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+          authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} -q
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}

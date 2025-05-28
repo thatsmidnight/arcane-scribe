@@ -75,6 +75,8 @@ combine_as_imports = true
 branch = true
 source = ["models", "services", "utils", "app.py"]
 omit = [
+    "app.py",
+    "cdk/*",
     "tests/*"
 ]
 

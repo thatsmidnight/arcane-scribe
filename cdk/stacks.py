@@ -210,7 +210,7 @@ class ArcaneScribeStack(Stack):
 
         authorizer_lambda = CustomLambda(
             self, "MyCustomAuthorizerLambda",
-            src_folder_path="custom-authorizer",
+            src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
                 "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,

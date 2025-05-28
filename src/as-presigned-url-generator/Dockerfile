@@ -5,7 +5,8 @@ FROM public.ecr.aws/lambda/python:3.12
 ENV LAMBDA_TASK_ROOT=/var/task
 
 # Copy function code
-COPY lambda_function.py ${LAMBDA_TASK_ROOT}/
+COPY handler.py ${LAMBDA_TASK_ROOT}/
+COPY presigned_url_generator/ ${LAMBDA_TASK_ROOT}/
 
 # Install dependencies from requirements.txt directly into LAMBDA_TASK_ROOT
 COPY requirements.txt ${LAMBDA_TASK_ROOT}/

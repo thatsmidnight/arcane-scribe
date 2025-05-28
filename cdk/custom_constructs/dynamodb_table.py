@@ -46,7 +46,7 @@ class CustomDynamoDBTable(Construct):
 
         # Append stack suffix to name if provided
         if stack_suffix:
-            name = f"{name}-{stack_suffix}"
+            name = f"{name}{stack_suffix}"
 
         # Create the DynamoDB table
         self.table = dynamodb.Table(

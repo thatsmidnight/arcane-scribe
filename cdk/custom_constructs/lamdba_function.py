@@ -57,7 +57,7 @@ class CustomLambda(Construct):
 
         # Append stack suffix to name if provided
         if stack_suffix:
-            name = f"{name}-{stack_suffix}"
+            name = f"{name}{stack_suffix}"
 
         # Default environment variables for Powertools for AWS Lambda
         powertools_env_vars = {

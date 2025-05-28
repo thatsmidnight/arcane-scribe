@@ -41,7 +41,7 @@ class CustomS3Bucket(Construct):
 
         # Append stack suffix to name if provided
         if stack_suffix:
-            name = f"{name}-{stack_suffix}"
+            name = f"{name}{stack_suffix}"
 
         # Set default lifecycle rules if not provided
         if lifecycle_rules is None:

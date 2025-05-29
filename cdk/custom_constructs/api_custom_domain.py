@@ -29,7 +29,7 @@ class ApiCustomDomain(Construct):
         base_domain_name: str,
         subdomain_part: str,
         http_api: apigwv2.IHttpApi,
-        stack_suffix: Optional[str] = None,
+        stack_suffix: Optional[str] = "",
         **kwargs,
     ) -> None:
         """Initialize the API Gateway custom domain setup.
@@ -53,8 +53,8 @@ class ApiCustomDomain(Construct):
 
         # Store the input parameters
         self.base_domain_name = base_domain_name
-        self.subdomain_part = subdomain_part + (stack_suffix or "")
-        self.full_subdomain_name = f"{subdomain_part}.{base_domain_name}"
+        self.subdomain_part = f"{subdomain_part}{stack_suffix}"
+        self.full_subdomain_name = f"{self.subdomain_part}.{base_domain_name}"
         self.http_api = http_api
 
         # 1. Look up existing hosted zone

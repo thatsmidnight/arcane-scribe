@@ -127,16 +127,14 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region IAM Policies
-        bedrock_invoke_policy = CustomIAMPolicyStatement(
-            self,
-            "BedrockInvokePolicy",
+        self.bedrock_invoke_policy = self.create_iam_policy_statement(
+            construct_id="BedrockInvokePolicy",
             actions=["bedrock:InvokeModel"],
             resources=[
                 f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_EMBEDDING_MODEL_ID}",
                 f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_TEXT_GENERATION_MODEL_ID}",
             ],
         )
-        self.bedrock_invoke_policy = bedrock_invoke_policy.statement
         # endregion
 
         # region Lambda Functions

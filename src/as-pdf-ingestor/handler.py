@@ -1,3 +1,6 @@
+# Standard Library
+from typing import Dict, Any
+
 # Third Party
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.utilities.typing import LambdaContext
@@ -12,7 +15,7 @@ logger = Logger()
 
 @logger.inject_lambda_context(log_event=True)
 @event_source(data_class=S3Event)
-def lambda_handler(event: S3Event, context: LambdaContext) -> None:
+def lambda_handler(event: S3Event, context: LambdaContext) -> Dict[str, Any]:
     """
     Lambda function handler to process S3 events for PDF ingestion.
     Utilizes a separate processor module for the core logic.
@@ -25,6 +28,10 @@ def lambda_handler(event: S3Event, context: LambdaContext) -> None:
         The context object containing runtime information.
     """
     logger.info("PDF ingestion Lambda triggered.")
+
+    # Initialize a list to collect results or errors for each record processed.
+    results = []
+
     # The S3Event object can contain multiple records if batching occurs,
     # though typically for S3 triggers it's one object per event invocation unless configured otherwise.
     for record in event.records:
@@ -60,7 +67,10 @@ def lambda_handler(event: S3Event, context: LambdaContext) -> None:
         try:
             # Call the main processing function from the local module
             # Pass the Powertools logger instance so the processor module can use the same contextual logging
-            processor.process_s3_object(bucket_name, object_key, logger)
+            result = processor.process_s3_object(bucket_name, object_key, logger)
+
+            # Append the result to the results list for further processing or logging
+            results.append(result)
             logger.info(
                 f"Successfully processed and vectorized: s3://{bucket_name}/{object_key}"
             )
@@ -69,13 +79,17 @@ def lambda_handler(event: S3Event, context: LambdaContext) -> None:
             logger.exception(
                 f"Failed to process s3://{bucket_name}/{object_key}. Error: {e}"
             )
-            # Depending on requirements, you might want to re-raise to mark the invocation as failed,
-            # which could trigger S3 event retries or DLQ processing if configured.
-            # For S3 events, if the Lambda errors out, S3 may retry.
-            # If you don't re-raise, the Lambda invocation will be marked as successful for this record.
-            # Let's re-raise to ensure visibility of failure.
-            raise
+
+            # Append the error to the results list for further handling
+            results.append(
+                {
+                    "error": str(e),
+                    "bucket": bucket_name,
+                    "key": object_key,
+                }
+            )
 
     logger.info(
         "PDF ingestion processing loop completed for all records in the event."
     )
+    return {"results": results}

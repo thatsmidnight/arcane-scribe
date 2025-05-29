@@ -154,7 +154,7 @@ class CustomHttpApiGateway(Construct):
                 .replace(" ", "")
             )
             path_part = path.replace("/", "_").strip("_")  # /x/y -> x_y
-            integration_id = f"{lambda_name}{path_part}Integration"
+            integration_id = f"{lambda_name}{path_part}integration"
 
         # Create Lambda integration
         integration = apigwv2_integrations.HttpLambdaIntegration(

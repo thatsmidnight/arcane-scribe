@@ -546,5 +546,4 @@ class ArcaneScribeStack(Stack):
             subdomain_part=self.subdomain_part,
             http_api=http_api,
             stack_suffix=self.stack_suffix,
-            output_name_prefix=f"ArcaneScribeCustomApi{self.stack_suffix}",
         )

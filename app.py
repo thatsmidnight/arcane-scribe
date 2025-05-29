@@ -2,10 +2,10 @@
 # Standard Library
 import os
 
-# Third-Party
+# Third Party
 import aws_cdk as cdk
 
-# Local Folder
+# Local Modules
 from cdk.stacks import ArcaneScribeStack
 
 # Initialize the CDK application

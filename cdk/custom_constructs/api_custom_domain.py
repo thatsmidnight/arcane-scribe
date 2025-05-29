@@ -31,7 +31,6 @@ class ApiCustomDomain(Construct):
         subdomain_part: str,
         http_api: apigwv2.IHttpApi,
         stack_suffix: Optional[str] = None,
-        output_name_prefix: Optional[str] = "ApiCustomDomain",
         **kwargs,
     ) -> None:
         """Initialize the API Gateway custom domain setup.
@@ -50,8 +49,6 @@ class ApiCustomDomain(Construct):
             The HTTP API to be mapped to the custom domain.
         stack_suffix : Optional[str], optional
             Suffix to append to the construct ID, by default ""
-        output_name_prefix : Optional[str], optional
-            Prefix for the output name, by default "ApiCustomDomain"
         """
         super().__init__(scope, id, **kwargs)
 

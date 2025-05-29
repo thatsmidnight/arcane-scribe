@@ -276,9 +276,7 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region Custom Domain Setup for API Gateway
-        self.create_api_custom_domain(
-            http_api=self.http_api.http_api,
-        )
+        self.create_api_custom_domain(http_api=self.http_api.http_api)
 
         # Output the custom API URL
         CfnOutput(

@@ -254,7 +254,7 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region Custom Domain Setup for API Gateway
-        self.custom_domain = self.create_api_custom_domain()
+        # self.custom_domain = self.create_api_custom_domain()
         # endregion
 
     def create_s3_bucket(

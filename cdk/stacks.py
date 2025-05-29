@@ -285,7 +285,7 @@ class ArcaneScribeStack(Stack):
             "CustomApiUrlOutput",
             value=f"https://{self.subdomain_part}{self.stack_suffix}.{self.base_domain_name}",
             description="Custom API URL for Arcane Scribe",
-            export_name=f"ArcaneScribeCustomApiUrl{self.stack_suffix}",
+            export_name=f"arcane-scribe-custom-api-url{self.stack_suffix}",
         )
         # endregion
 

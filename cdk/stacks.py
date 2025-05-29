@@ -140,18 +140,13 @@ class ArcaneScribeStack(Stack):
 
         # region Lambda Functions
         # Lambda for generating pre-signed URLs for document uploads
-        presigned_url_lambda = CustomLambda(
-            self,
-            "PresignedUrlLambda",
+        self.presigned_url_lambda = self.create_lambda_function(
+            construct_id="PresignedUrlLambda",
             src_folder_path="as-presigned-url-generator",
-            stack_suffix=self.stack_suffix,
             environment={
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name
             },
-            memory_size=128,  # Typically small for this task
-            timeout=Duration.seconds(10),
         )
-        self.presigned_url_lambda = presigned_url_lambda.function
 
         # Grant S3 permission to the presigned URL Lambda to put objects (via
         # pre-signed URLs) to the documents bucket
@@ -159,11 +154,9 @@ class ArcaneScribeStack(Stack):
         self.documents_bucket.grant_read(self.presigned_url_lambda)
 
         # Lambda for PDF ingestion and processing
-        pdf_ingestor_lambda = CustomLambda(
-            self,
-            "PdfIngestorLambda",
+        self.pdf_ingestor_lambda = self.create_lambda_function(
+            construct_id="PdfIngestorLambda",
             src_folder_path="as-pdf-ingestor",
-            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -175,7 +168,6 @@ class ArcaneScribeStack(Stack):
             timeout=Duration.minutes(5),  # May take longer for large PDFs
             initial_policy=[self.bedrock_invoke_policy],
         )
-        self.pdf_ingestor_lambda = pdf_ingestor_lambda.function
 
         # Grant S3 permissions for the PDF ingestor Lambda
         self.documents_bucket.grant_read(self.pdf_ingestor_lambda)
@@ -189,11 +181,9 @@ class ArcaneScribeStack(Stack):
         )
 
         # Lambda for RAG queries (using Langchain)
-        rag_query_lambda = CustomLambda(
-            self,
-            "RagQueryLambda",
+        self.rag_query_lambda = self.create_lambda_function(
+            construct_id="RagQueryLambda",
             src_folder_path="as-rag-query",
-            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -210,7 +200,6 @@ class ArcaneScribeStack(Stack):
             timeout=Duration.seconds(60),
             initial_policy=[self.bedrock_invoke_policy],
         )
-        self.rag_query_lambda = rag_query_lambda.function
 
         # Grant S3 permissions for the RAG query Lambda
         self.vector_store_bucket.grant_read(self.rag_query_lambda)
@@ -218,16 +207,15 @@ class ArcaneScribeStack(Stack):
         # Grant DynamoDB permissions for the RAG query Lambda
         self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
 
-        authorizer_lambda = CustomLambda(
-            self,
-            "ArcaneScribeAuthorizerLambda",
+        # Lambda for the custom authorizer
+        self.authorizer_lambda = self.create_lambda_function(
+            construct_id="ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
                 "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
             },
         )
-        self.authorizer_lambda = authorizer_lambda.function
         # endregion
 
         # region API Gateway

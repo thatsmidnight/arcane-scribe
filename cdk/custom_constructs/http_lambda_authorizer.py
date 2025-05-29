@@ -45,7 +45,8 @@ class CustomHttpLambdaAuthorizer(Construct):
         stack_suffix : str, optional
             Suffix to append to the authorizer name, by default ""
         response_types : Optional[List[apigwv2_authorizers.HttpLambdaResponseType]], optional
-            List of response types for the authorizer, by default None
+            List of response types for the authorizer,
+            by default [apigwv2_authorizers.HttpLambdaResponseType.SIMPLE]
         identity_source : Optional[List[str]], optional
             List of identity sources for the authorizer, by default None
         """
@@ -55,7 +56,10 @@ class CustomHttpLambdaAuthorizer(Construct):
             "DefaultHttpLambdaAuthorizer",
             authorizer_name=f"{name}{stack_suffix}",
             handler=authorizer_function,
-            response_types=response_types or [],
+            response_types=(
+                response_types
+                or [apigwv2_authorizers.HttpLambdaResponseType.SIMPLE]
+            ),
             identity_source=identity_source or [],
             results_cache_ttl=Duration.minutes(60),
         )

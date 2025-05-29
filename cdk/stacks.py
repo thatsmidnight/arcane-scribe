@@ -103,24 +103,18 @@ class ArcaneScribeStack(Stack):
 
         # region S3 Buckets
         # Bucket for storing uploaded PDF documents
-        documents_bucket = CustomS3Bucket(
-            self,
-            "DocumentsBucket",
+        self.documents_bucket = self.create_s3_bucket(
+            construct_id="DocumentsBucket",
             name="arcane-scribe-documents",
-            stack_suffix=self.stack_suffix,
             versioned=True,
         )
-        self.documents_bucket = documents_bucket.bucket
 
         # Bucket for storing the FAISS index and processed text
-        vector_store_bucket = CustomS3Bucket(
-            self,
-            "VectorStoreBucket",
+        self.vector_store_bucket = self.create_s3_bucket(
+            construct_id="VectorStoreBucket",
             name="arcane-scribe-vector-store",
-            stack_suffix=self.stack_suffix,
             versioned=True,
         )
-        self.vector_store_bucket = vector_store_bucket.bucket
         # endregion
 
         # region DynamoDB Tables

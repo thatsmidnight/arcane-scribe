@@ -116,7 +116,9 @@ def get_presigned_url() -> Dict[str, Any]:
             }
 
         # Validate srd_id
-        if not validated_data.srd_id or not isinstance(validated_data.srd_id, str):
+        if not validated_data.srd_id or not isinstance(
+            validated_data.srd_id, str
+        ):
             return {
                 "statusCode": 400,
                 "headers": {"Content-Type": "application/json"},

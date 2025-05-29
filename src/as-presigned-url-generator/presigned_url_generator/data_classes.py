@@ -17,6 +17,7 @@ class PresignedUrlRequest:
         content_type : Optional[str]
             Optional content type for the file.
     """
+
     file_name: str = field(
         metadata={"description": "The name of the file to upload."}
     )

@@ -67,7 +67,9 @@ def lambda_handler(event: S3Event, context: LambdaContext) -> Dict[str, Any]:
         try:
             # Call the main processing function from the local module
             # Pass the Powertools logger instance so the processor module can use the same contextual logging
-            result = processor.process_s3_object(bucket_name, object_key, logger)
+            result = processor.process_s3_object(
+                bucket_name, object_key, logger
+            )
 
             # Append the result to the results list for further processing or logging
             results.append(result)

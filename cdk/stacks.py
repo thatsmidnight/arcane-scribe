@@ -320,7 +320,7 @@ class ArcaneScribeStack(Stack):
             self,
             "ApiAliasRecord",
             zone=hosted_zone,
-            record_name=self.subdomain_part,  # e.g., "arcane-scribe" or "arcane-scribe-dev"
+            record_name=f"{self.subdomain_part}{self.stack_suffix}",  # e.g., "arcane-scribe" or "arcane-scribe-dev"
             target=route53.RecordTarget.from_alias(
                 targets.ApiGatewayv2DomainProperties(
                     regional_domain_name=apigw_custom_domain.regional_domain_name,

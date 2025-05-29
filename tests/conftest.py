@@ -1,8 +1,52 @@
 # Standard Library
+import os
 import sys
 import importlib.util
 from pathlib import Path
 from types import ModuleType
+
+# Third Party
+import pytest
+import boto3
+from moto import mock_aws
+
+
+@pytest.fixture(scope="session")
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ["AWS_ACCESS_KEY_ID"] = "testing"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
+    os.environ["AWS_SECURITY_TOKEN"] = "testing"
+    os.environ["AWS_SESSION_TOKEN"] = "testing"
+    os.environ["AWS_DEFAULT_REGION"] = "us-east-1"
+
+
+@pytest.fixture(scope="function")
+def mocked_s3(aws_credentials):
+    """
+    Mocked S3 service using moto for testing.
+    This fixture sets up a mocked S3 service that can be used in tests.
+    """
+    with mock_aws():
+        # Create a mocked S3 client
+        s3_client = boto3.client("s3", region_name="us-east-1")
+        yield s3_client
+
+
+def pytest_configure(config):
+    """
+    Configure pytest to add the src directory to sys.path for module imports.
+    This allows importing modules from the src directory in tests.
+    """
+    # Get the absolute path to the project root
+    project_root = Path(__file__).parent.parent
+
+    # Add the src directory to sys.path
+    src_path = project_root / "src"
+    if str(src_path) not in sys.path:
+        sys.path.insert(0, str(src_path))
+
+    return config
 
 
 def import_handler(module_name: str) -> ModuleType:

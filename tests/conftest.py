@@ -75,7 +75,7 @@ def create_query_cache_table(mocked_dynamodb):
         AttributeDefinitions=[
             {"AttributeName": "dynamodb_client", "AttributeType": "S"},
         ],
-        ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+        BillingMode="PAY_PER_REQUEST",
     )
 
 

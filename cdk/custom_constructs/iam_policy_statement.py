@@ -1,7 +1,7 @@
 # Standard Library
 from typing import Optional, List
 
-# Third-Party
+# Third Party
 from aws_cdk import aws_iam as iam
 from constructs import Construct
 

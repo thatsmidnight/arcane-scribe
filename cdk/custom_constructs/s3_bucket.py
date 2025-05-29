@@ -1,7 +1,7 @@
 # Standard Library
 from typing import Optional, List
 
-# Third-Party
+# Third Party
 from aws_cdk import aws_s3 as s3, RemovalPolicy, Duration
 from constructs import Construct
 

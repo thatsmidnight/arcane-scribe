@@ -2,7 +2,7 @@
 import os
 from typing import Optional, List
 
-# Third-Party
+# Third Party
 from aws_cdk import (
     aws_lambda as _lambda,
     aws_iam as iam,

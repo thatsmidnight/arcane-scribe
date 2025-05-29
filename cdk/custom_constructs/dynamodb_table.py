@@ -1,7 +1,7 @@
 # Standard Library
 from typing import Optional
 
-# Third-Party
+# Third Party
 from aws_cdk import aws_dynamodb as dynamodb, RemovalPolicy
 from constructs import Construct
 

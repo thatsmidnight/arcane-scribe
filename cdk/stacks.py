@@ -245,31 +245,19 @@ class ArcaneScribeStack(Stack):
             identity_source=[f"$request.header.{final_auth_header_name}"],
         )
 
-        # Integration for pre-signed URL generation
-        presigned_url_integration = apigwv2_integrations.HttpLambdaIntegration(
-            "PresignedUrlIntegration",
-            handler=self.presigned_url_lambda,
-        )
-
         # Add a route for pre-signed URL generation
-        self.http_api.http_api.add_routes(
+        self.http_api.add_lambda_route(
             path="/srd/upload-url",
+            lambda_function=self.presigned_url_lambda,
             methods=[apigwv2.HttpMethod.POST],
-            integration=presigned_url_integration,
             authorizer=http_lambda_authorizer,
         )
 
-        # Integration for RAG queries
-        rag_query_integration = apigwv2_integrations.HttpLambdaIntegration(
-            "RagQueryIntegration",
-            handler=self.rag_query_lambda,
-        )
-
         # Add a route for RAG queries
-        self.http_api.http_api.add_routes(
+        self.http_api.add_lambda_route(
             path="/query",
+            lambda_function=self.presigned_url_lambda,
             methods=[apigwv2.HttpMethod.POST],
-            integration=rag_query_integration,
             authorizer=http_lambda_authorizer,
         )
         # endregion

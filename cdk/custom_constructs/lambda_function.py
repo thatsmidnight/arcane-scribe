@@ -23,6 +23,7 @@ class CustomLambda(Construct):
         environment: Optional[dict] = None,
         layers: Optional[List[_lambda.ILayerVersion]] = None,
         initial_policy: Optional[List[iam.PolicyStatement]] = None,
+        description: Optional[str] = None,
         **kwargs,
     ) -> None:
         """Custom Lambda Construct for AWS CDK.
@@ -48,6 +49,8 @@ class CustomLambda(Construct):
         initial_policy : Optional[List[iam.PolicyStatement]], optional
             Initial IAM policy statements to attach to the Lambda function,
             by default None
+        description : Optional[str], optional
+            Description for the Lambda function, by default None
         """
         super().__init__(scope, id, **kwargs)
 
@@ -92,4 +95,5 @@ class CustomLambda(Construct):
             initial_policy=initial_policy,
             tracing=_lambda.Tracing.ACTIVE,
             insights_version=_lambda.LambdaInsightsVersion.VERSION_1_0_229_0,
+            description=description or f"Lambda function for {name}{stack_suffix}",
         )

@@ -34,6 +34,18 @@ def mocked_s3(aws_credentials):
 
 
 @pytest.fixture(scope="function")
+def mocked_dynamodb(aws_credentials):
+    """
+    Mocked DynamoDB service using moto for testing.
+    This fixture sets up a mocked DynamoDB service that can be used in tests.
+    """
+    with mock_aws():
+        # Create a mocked DynamoDB client
+        dynamodb_client = boto3.client("dynamodb", region_name="us-east-1")
+        yield dynamodb_client
+
+
+@pytest.fixture(scope="function")
 def create_documents_bucket(mocked_s3):
     """
     Create a documents test bucket in the mocked S3 service.
@@ -47,6 +59,24 @@ def create_vector_bucket(mocked_s3):
     Create a vector output test bucket in the mocked S3 service.
     """
     mocked_s3.create_bucket(Bucket="test-vector-bucket")
+
+
+@pytest.fixture(scope="function")
+def create_query_cache_table(mocked_dynamodb):
+    """
+    Create a query cache table in the mocked DynamoDB service.
+    This table is used to store query results for testing purposes.
+    """
+    mocked_dynamodb.create_table(
+        TableName="test-query-cache-table",
+        KeySchema=[
+            {"AttributeName": "dynamodb_client", "KeyType": "HASH"},
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": "dynamodb_client", "AttributeType": "S"},
+        ],
+        ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
+    )
 
 
 def pytest_configure(config):

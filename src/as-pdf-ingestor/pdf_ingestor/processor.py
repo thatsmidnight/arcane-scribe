@@ -1,6 +1,8 @@
 # Standard Library
 import os
 import shutil
+from pathlib import Path
+from typing import Tuple
 
 # Third Party
 import boto3
@@ -47,6 +49,35 @@ except Exception as e:
 VECTOR_STORE_BUCKET_NAME = os.environ.get("VECTOR_STORE_BUCKET_NAME")
 
 
+def extract_srd_info(object_key: str) -> Tuple[str, str]:
+    """Extract the SRD ID and filename from the S3 object key.
+
+    The S3 object key is expected to be in the format:
+    `<srd_id>/<filename>`, where `<srd_id>` is the SRD ID and
+    `<filename>` is the name of the file.
+
+    Parameters
+    ----------
+    object_key : str
+        The S3 object key to extract the SRD ID and filename from.
+
+    Returns
+    -------
+    Tuple[str, str]
+        A tuple containing the SRD ID and the filename.
+        If the object key does not contain a slash, the filename is returned
+        as the second element, and the SRD ID is set to an empty string.
+    """
+    # Split the object key into parts to extract SRD ID and filename
+    parts = object_key.split("/", 1)
+
+    # No SRD ID in path, use the filename as both SRD ID and filename
+    if len(parts) < 2:
+        return Path(object_key).stem, object_key
+
+    return parts[0], parts[1]
+
+
 def process_s3_object(
     bucket_name: str, object_key: str, lambda_logger: Logger
 ) -> None:
@@ -73,27 +104,16 @@ def process_s3_object(
     Exception
         For any other unexpected errors during processing.
     """
-    # Validate that the necessary components are initialized
-    if not s3_client or not bedrock_runtime_client or not embedding_model:
-        lambda_logger.error(
-            "Processor dependencies (S3/Bedrock clients or embedding model) not initialized."
-        )
-        raise RuntimeError("Critical components failed to initialize.")
-    if not VECTOR_STORE_BUCKET_NAME:
-        lambda_logger.error(
-            "VECTOR_STORE_BUCKET_NAME environment variable is not set."
-        )
-        raise EnvironmentError("VECTOR_STORE_BUCKET_NAME is not configured.")
+    # Extract SRD ID form object key
+    srd_id, filename = extract_srd_info(object_key=object_key)
 
     # Validate the bucket name and object key
-    base_file_name = os.path.basename(object_key)
+    base_file_name = os.path.basename(filename)
     safe_base_file_name = "".join(
         c if c.isalnum() or c in [".", "-"] else "_" for c in base_file_name
     )
     temp_pdf_path = f"/tmp/{safe_base_file_name}"
-    temp_faiss_index_name = (
-        f"{os.path.splitext(safe_base_file_name)[0]}_faiss_index"
-    )
+    temp_faiss_index_name = f"{srd_id}_faiss_index"
     temp_faiss_index_path = f"/tmp/{temp_faiss_index_name}"
 
     try:
@@ -146,7 +166,7 @@ def process_s3_object(
         )
 
         # Upload the FAISS index files to S3
-        s3_index_prefix = f"{os.path.splitext(object_key)[0]}/faiss_index"
+        s3_index_prefix = f"{srd_id}/faiss_index"
         for file_name_in_index_dir in os.listdir(temp_faiss_index_path):
             local_file_to_upload = os.path.join(
                 temp_faiss_index_path, file_name_in_index_dir
@@ -190,3 +210,15 @@ def process_s3_object(
                 lambda_logger.error(
                     f"Error cleaning temp FAISS dir {temp_faiss_index_path}: {e_clean}"
                 )
+
+    # Save metadata about the processed document
+    metadata = {
+        "srd_id": srd_id,
+        "original_filename": filename,
+        "chunk_count": len(texts),
+        "source_bucket": bucket_name,
+        "source_key": object_key,
+        "vector_index_location": f"{s3_index_prefix}/",
+    }
+
+    return metadata

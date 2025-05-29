@@ -33,6 +33,22 @@ def mocked_s3(aws_credentials):
         yield s3_client
 
 
+@pytest.fixture(scope="function")
+def create_documents_bucket(mocked_s3):
+    """
+    Create a documents test bucket in the mocked S3 service.
+    """
+    mocked_s3.create_bucket(Bucket="test-documents-bucket")
+
+
+@pytest.fixture(scope="function")
+def create_vector_bucket(mocked_s3):
+    """
+    Create a vector output test bucket in the mocked S3 service.
+    """
+    mocked_s3.create_bucket(Bucket="test-vector-bucket")
+
+
 def pytest_configure(config):
     """
     Configure pytest to add the src directory to sys.path for module imports.

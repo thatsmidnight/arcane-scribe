@@ -220,31 +220,28 @@ class ArcaneScribeStack(Stack):
 
         # region API Gateway
         # Create an HTTP API Gateway
-        http_api = apigwv2.HttpApi(
-            self,
-            "ArcaneScribeHttpApi",
-            api_name=f"ArcaneScribeHttpApi{self.stack_suffix}",
-            cors_preflight=apigwv2.CorsPreflightOptions(
-                allow_origins=["*"],  # Adjust as needed for security
-                allow_methods=[
-                    apigwv2.CorsHttpMethod.POST,
-                    apigwv2.CorsHttpMethod.GET,
-                    apigwv2.CorsHttpMethod.OPTIONS,
-                ],
-                allow_headers=[
-                    "Content-Type",
-                    "Authorization",
-                    "X-Amz-Date",
-                    "X-Api-Key",
-                    "X-Amz-Security-Token",
-                    "X-Amz-User-Agent",
-                    "X-File-Name",
-                    "X-File-Type",
-                    final_auth_header_name,  # Custom auth header
-                ],
-                max_age=Duration.days(1),
-            ),
-        )
+        http_api = self.create_http_api_gateway(
+            construct_id="ArcaneScribeHttpApi",
+            api_name="arcane-scribe-http-api",
+            allow_origins=["*"],
+            allow_methods=[
+                apigwv2.CorsHttpMethod.POST,
+                apigwv2.CorsHttpMethod.GET,
+                apigwv2.CorsHttpMethod.OPTIONS,
+            ],
+            allow_headers=[
+                "Content-Type",
+                "Authorization",
+                "X-Amz-Date",
+                "X-Api-Key",
+                "X-Amz-Security-Token",
+                "X-Amz-User-Agent",
+                "X-File-Name",
+                "X-File-Type",
+                final_auth_header_name,  # Custom auth header
+            ],
+            max_age=Duration.days(1),
+        ).http_api
 
         # Create an authorizer for the HTTP API
         http_lambda_authorizer = apigwv2_authorizers.HttpLambdaAuthorizer(

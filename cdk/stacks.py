@@ -144,6 +144,7 @@ class ArcaneScribeStack(Stack):
             environment={
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name
             },
+            description="Generates pre-signed S3 URLs for uploading documents",
         )
 
         # Grant S3 permission to the presigned URL Lambda to put objects (via
@@ -165,6 +166,7 @@ class ArcaneScribeStack(Stack):
             memory_size=1024,  # More memory for processing PDFs
             timeout=Duration.minutes(5),  # May take longer for large PDFs
             initial_policy=[self.bedrock_invoke_policy],
+            description="Ingests PDF documents, extracts text, and stores embeddings in the vector store",
         )
 
         # Grant S3 permissions for the PDF ingestor Lambda
@@ -197,6 +199,7 @@ class ArcaneScribeStack(Stack):
             memory_size=1024,  # More memory for processing queries
             timeout=Duration.seconds(60),
             initial_policy=[self.bedrock_invoke_policy],
+            description="Handles RAG queries using Langchain, retrieves documents from S3, and generates answers using Bedrock",
         )
 
         # Grant S3 permissions for the RAG query Lambda
@@ -213,6 +216,7 @@ class ArcaneScribeStack(Stack):
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
                 "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
             },
+            description="Custom authorizer for Arcane Scribe HTTP API",
         )
         # endregion
 
@@ -446,6 +450,7 @@ class ArcaneScribeStack(Stack):
         memory_size: Optional[int] = 128,
         timeout: Optional[Duration] = Duration.seconds(10),
         initial_policy: Optional[List[iam.PolicyStatement]] = None,
+        description: Optional[str] = None,
     ) -> lambda_.Function:
         """Helper method to create a Lambda function.
 
@@ -463,6 +468,8 @@ class ArcaneScribeStack(Stack):
             Timeout for the Lambda function, by default Duration.seconds(10)
         initial_policy : Optional[List[iam.PolicyStatement]], optional
             Initial IAM policies to attach to the Lambda function, by default None
+        description : Optional[str], optional
+            Description for the Lambda function, by default None
 
         Returns
         -------
@@ -478,6 +485,7 @@ class ArcaneScribeStack(Stack):
             memory_size=memory_size,
             timeout=timeout,
             initial_policy=initial_policy or [],
+            description=description,
         )
         return custom_lambda.function
 

@@ -8,6 +8,7 @@ import aws_cdk as cdk
 # Local Folder
 from cdk.stacks import ArcaneScribeStack
 
+# Initialize the CDK application
 app = cdk.App()
 
 # Standard AWS environment variables for CDK
@@ -31,9 +32,10 @@ else:
     stack_suffix = ""
     final_stack_name = stack_name_prefix
 
-
+# Create the stack with the final name and environment
 ArcaneScribeStack(
     app, final_stack_name, stack_suffix=stack_suffix, env=aws_env
 )
 
+# Synthesize the app
 app.synth()

@@ -24,7 +24,7 @@ stack_name_prefix = "arcane-scribe-stack"
 
 if stack_suffix != "main":
     final_stack_name = f"{stack_name_prefix}" + (
-        f"-{stack_suffix}" if stack_suffix else ""
+        stack_suffix if stack_suffix else ""
     )  # Constructs the final stack name with suffix
 else:
     # Fallback for local development or main branch if no suffix is provided

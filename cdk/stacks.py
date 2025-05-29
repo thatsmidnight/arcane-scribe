@@ -220,7 +220,7 @@ class ArcaneScribeStack(Stack):
 
         # region API Gateway
         # Create an HTTP API Gateway
-        http_api = self.create_http_api_gateway(
+        self.http_api = self.create_http_api_gateway(
             construct_id="ArcaneScribeHttpApi",
             api_name="arcane-scribe-http-api",
             allow_origins=["*"],
@@ -241,7 +241,7 @@ class ArcaneScribeStack(Stack):
                 final_auth_header_name,  # Custom auth header
             ],
             max_age=Duration.days(1),
-        ).http_api
+        )
 
         # Create an authorizer for the HTTP API
         http_lambda_authorizer = apigwv2_authorizers.HttpLambdaAuthorizer(
@@ -259,7 +259,7 @@ class ArcaneScribeStack(Stack):
         )
 
         # Add a route for pre-signed URL generation
-        http_api.add_routes(
+        self.http_api.http_api.add_routes(
             path="/srd/upload-url",
             methods=[apigwv2.HttpMethod.POST],
             integration=presigned_url_integration,
@@ -273,7 +273,7 @@ class ArcaneScribeStack(Stack):
         )
 
         # Add a route for RAG queries
-        http_api.add_routes(
+        self.http_api.http_api.add_routes(
             path="/query",
             methods=[apigwv2.HttpMethod.POST],
             integration=rag_query_integration,
@@ -304,7 +304,7 @@ class ArcaneScribeStack(Stack):
         )
 
         # 4. Map HTTP API to this custom domain
-        default_stage = http_api.default_stage
+        default_stage = self.http_api.http_api.default_stage
         if not default_stage:
             raise ValueError(
                 "Default stage could not be found for API mapping. Ensure API has a default stage or specify one."
@@ -313,7 +313,7 @@ class ArcaneScribeStack(Stack):
         _ = apigwv2.ApiMapping(
             self,
             "ApiMapping",
-            api=http_api,
+            api=self.http_api.http_api,
             domain_name=apigw_custom_domain,
             stage=default_stage,  # Use the actual default stage object
         )

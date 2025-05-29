@@ -8,10 +8,14 @@ from aws_cdk import (
     aws_apigatewayv2_authorizers as apigwv2_authorizers,
     aws_s3_notifications as s3n,
     aws_dynamodb as dynamodb,
+    aws_route53 as route53,
+    aws_route53_targets as targets,
+    aws_certificatemanager as acm,
     aws_s3 as s3,
     aws_iam as iam,
     aws_lambda as lambda_,
     Duration,
+    CfnOutput,
 )
 from constructs import Construct
 
@@ -254,7 +258,65 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region Custom Domain Setup for API Gateway
-        self.custom_domain = self.create_api_custom_domain()
+        # 1. Look up existing hosted zone for "thatsmidnight.com"
+        hosted_zone = route53.HostedZone.from_lookup(
+            self, "ArcaneScribeHostedZone", domain_name=self.base_domain_name
+        )
+
+        # 2. Create an ACM certificate for subdomain with DNS validation
+        api_certificate = acm.Certificate(
+            self,
+            "ApiCertificate",
+            domain_name=self.full_subdomain_name,
+            validation=acm.CertificateValidation.from_dns(hosted_zone),
+        )
+
+        # 3. Create the API Gateway Custom Domain Name resource
+        apigw_custom_domain = apigwv2.DomainName(
+            self,
+            "ApiCustomDomain",
+            domain_name=self.full_subdomain_name,
+            certificate=api_certificate,
+        )
+
+        # 4. Map HTTP API to this custom domain
+        default_stage = self.http_api.http_api.default_stage
+        if not default_stage:
+            raise ValueError(
+                "Default stage could not be found for API mapping. "
+                "Ensure API has a default stage or specify one."
+            )
+
+        _ = apigwv2.ApiMapping(
+            self,
+            "ApiMapping",
+            api=self.http_api.http_api,
+            domain_name=apigw_custom_domain,
+            stage=default_stage,  # Use the actual default stage object
+        )
+
+        # 5. Create the Route 53 Alias Record pointing to the API Gateway custom domain
+        route53.ARecord(
+            self,
+            "ApiAliasRecord",
+            zone=hosted_zone,
+            record_name=self.subdomain_part,  # e.g., "arcane-scribe" or "arcane-scribe-dev"
+            target=route53.RecordTarget.from_alias(
+                targets.ApiGatewayv2DomainProperties(
+                    regional_domain_name=apigw_custom_domain.regional_domain_name,
+                    regional_hosted_zone_id=apigw_custom_domain.regional_hosted_zone_id,
+                )
+            ),
+        )
+
+        # 6. Output the custom API URL
+        CfnOutput(
+            self,
+            "CustomApiUrlOutput",
+            value=f"https://{self.full_subdomain_name}",
+            description="Custom API URL for Arcane Scribe",
+            export_name=f"ArcaneScribeCustomApiUrl{self.stack_suffix}",
+        )
         # endregion
 
     def create_s3_bucket(

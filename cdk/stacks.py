@@ -68,6 +68,9 @@ class ArcaneScribeStack(Stack):
         ).lower()
         self.base_domain_name = "thatsmidnight.com"
         self.subdomain_part = "arcane-scribe"
+        self.full_domain_name = (
+            f"{self.subdomain_part}{self.stack_suffix}.{self.base_domain_name}"
+        )
         # endregion
 
         # region Authorization Header and Secret
@@ -271,7 +274,7 @@ class ArcaneScribeStack(Stack):
         CfnOutput(
             self,
             "CustomApiUrlOutput",
-            value=f"https://{self.subdomain_part}{self.stack_suffix}.{self.base_domain_name}",
+            value=f"https://{self.full_domain_name}",
             description="Custom API URL for Arcane Scribe",
             export_name=f"arcane-scribe-custom-api-url{self.stack_suffix}",
         )

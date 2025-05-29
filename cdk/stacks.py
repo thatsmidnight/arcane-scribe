@@ -63,9 +63,7 @@ class ArcaneScribeStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # region Stack Suffix and Subdomain Configuration
-        self.stack_suffix = (
-            "-" + stack_suffix if stack_suffix else ""
-        ).lower()
+        self.stack_suffix = (stack_suffix if stack_suffix else "").lower()
         self.base_domain_name = "thatsmidnight.com"
         self.subdomain_part = "arcane-scribe"
         self.full_domain_name = (

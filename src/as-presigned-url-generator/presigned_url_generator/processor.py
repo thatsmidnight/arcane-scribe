@@ -27,6 +27,7 @@ if not DOCUMENTS_BUCKET_NAME:
 
 def generate_presigned_url(
     file_name: str,
+    srd_id: str,
     content_type: str = "application/pdf",
     expiration: int = 3600,
 ) -> str:
@@ -37,6 +38,8 @@ def generate_presigned_url(
     ----------
     file_name : str
         The name of the file to be uploaded.
+    srd_id : str
+        The client-specified SRD identifier.
     content_type : str, optional
         The content type of the file, defaults to "application/pdf".
     expiration : int, optional
@@ -47,18 +50,27 @@ def generate_presigned_url(
     -------
     str
         A presigned URL for uploading the file to S3.
+
+    Raises
+    ------
+    ClientError
+        If there is an error generating the presigned URL.
     """
+    # Construct object key using SRD ID as prefix
+    object_key = f"{srd_id}/{file_name}"
+
+    # Generate presigned URL with content type
     try:
-        response = s3_client.generate_presigned_url(
+        presigned_url = s3_client.generate_presigned_url(
             "put_object",
             Params={
                 "Bucket": DOCUMENTS_BUCKET_NAME,
-                "Key": file_name,
+                "Key": object_key,
                 "ContentType": content_type,
             },
             ExpiresIn=expiration,
         )
-        return response
+        return presigned_url
     except ClientError as e:
         logger.error(f"Failed to generate presigned URL: {e}")
         raise e

@@ -127,6 +127,7 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region IAM Policies
+        # Policy to allow Bedrock model invocation
         self.bedrock_invoke_policy = self.create_iam_policy_statement(
             construct_id="BedrockInvokePolicy",
             actions=["bedrock:InvokeModel"],

@@ -240,7 +240,7 @@ class ArcaneScribeStack(Stack):
         # Create an authorizer for the HTTP API
         http_lambda_authorizer = self.create_http_lambda_authorizer(
             construct_id="ArcaneScribeHttpLambdaAuthorizer",
-            name=f"arcane-scribe-http-authorizer{self.stack_suffix}",
+            name="arcane-scribe-http-authorizer",
             authorizer_function=self.authorizer_lambda,
             identity_source=[f"$request.header.{final_auth_header_name}"],
         )

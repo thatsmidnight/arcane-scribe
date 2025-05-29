@@ -3,7 +3,6 @@ from typing import Optional
 
 # Third Party
 from aws_cdk import (
-    CfnOutput,
     aws_apigatewayv2 as apigwv2,
     aws_route53 as route53,
     aws_route53_targets as targets,

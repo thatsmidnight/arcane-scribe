@@ -119,17 +119,11 @@ class ArcaneScribeStack(Stack):
 
         # region DynamoDB Tables
         # This table will store query hashes and their corresponding Bedrock-generated answers
-        query_cache_table = CustomDynamoDBTable(
-            self,
-            "RagQueryCacheTable",
+        self.query_cache_table = self.create_dynamodb_table(
+            construct_id="RagQueryCacheTable",
             name="arcane-scribe-rag-query-cache",
-            partition_key=dynamodb.Attribute(
-                name="query_hash", type=dynamodb.AttributeType.STRING
-            ),
-            stack_suffix=self.stack_suffix,
-            time_to_live_attribute="ttl",
+            partition_key_name="query_hash",
         )
-        self.query_cache_table = query_cache_table.table
         # endregion
 
         # region IAM Policies

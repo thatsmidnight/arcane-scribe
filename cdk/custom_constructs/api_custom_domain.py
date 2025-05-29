@@ -30,25 +30,34 @@ class ApiCustomDomain(Construct):
         base_domain_name: str,
         subdomain_part: str,
         http_api: apigwv2.IHttpApi,
+        stack_suffix: Optional[str] = None,
         output_name_prefix: Optional[str] = "ApiCustomDomain",
         **kwargs,
     ) -> None:
         """Initialize the API Gateway custom domain setup.
 
-        Args:
-            scope: The scope in which this construct is defined.
-            id: The ID of the construct.
-            base_domain_name: The base domain name (e.g., "example.com").
-            subdomain_part: The subdomain part (e.g., "api" or "api-dev").
-            http_api: The HTTP API to map to the custom domain.
-            output_name_prefix: Prefix for CloudFormation outputs.
-            **kwargs: Additional keyword arguments.
+        Parameters
+        ----------
+        scope : Construct
+            The scope in which this construct is defined.
+        id : str
+            The ID of the construct.
+        base_domain_name : str
+            The base domain name (e.g., example.com) for the custom domain.
+        subdomain_part : str
+            The subdomain part to be used (e.g., api for api.example.com).
+        http_api : apigwv2.IHttpApi
+            The HTTP API to be mapped to the custom domain.
+        stack_suffix : Optional[str], optional
+            Suffix to append to the construct ID, by default ""
+        output_name_prefix : Optional[str], optional
+            Prefix for the output name, by default "ApiCustomDomain"
         """
         super().__init__(scope, id, **kwargs)
 
         # Store the input parameters
         self.base_domain_name = base_domain_name
-        self.subdomain_part = subdomain_part
+        self.subdomain_part = subdomain_part + (stack_suffix or "")
         self.full_subdomain_name = f"{subdomain_part}.{base_domain_name}"
         self.http_api = http_api
 
@@ -90,15 +99,6 @@ class ApiCustomDomain(Construct):
                     regional_hosted_zone_id=self.custom_domain.regional_hosted_zone_id,
                 )
             ),
-        )
-
-        # 6. Output the custom API URL
-        self.custom_url_output = CfnOutput(
-            self,
-            f"{output_name_prefix}UrlOutput",
-            value=f"https://{self.full_subdomain_name}",
-            description=f"Custom API URL for {self.subdomain_part}",
-            export_name=f"{output_name_prefix}Url",
         )
 
     def _validate_and_map_api(self) -> None:

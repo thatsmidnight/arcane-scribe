@@ -26,8 +26,8 @@ def get_presigned_url() -> Dict[str, Any]:
     The request body should be a JSON object adhering to the
     PresignedUrlRequest schema.
 
-    - Required: `{"file_name": "my_document.pdf"}`
-    - Optional: `{"file_name": "my_document.pdf", "content_type": "application/pdf"}`
+    - Required: `{"file_name": "my_document.pdf", "srd_id": "dnd5e"}`
+    - Optional: `{"file_name": "my_document.pdf", "srd_id": "dnd5e", "content_type": "application/pdf"}`
 
     Returns
     -------
@@ -94,7 +94,7 @@ def get_presigned_url() -> Dict[str, Any]:
                 "body": json.dumps({"error": error_message}),
             }
 
-        # Manual type checks for fields, as dataclasses don't enforce types at runtime by default
+        # Validate file_name
         if (
             not isinstance(validated_data.file_name, str)
             or len(validated_data.file_name.strip()) == 0
@@ -115,6 +115,17 @@ def get_presigned_url() -> Dict[str, Any]:
                 ),
             }
 
+        # Validate srd_id
+        if not validated_data.srd_id or not isinstance(validated_data.srd_id, str):
+            return {
+                "statusCode": 400,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps(
+                    {"error": "'srd_id' must be a non-empty string"}
+                ),
+            }
+
+        # Validate content_type, if provided
         if validated_data.content_type is not None and not isinstance(
             validated_data.content_type, str
         ):
@@ -131,6 +142,7 @@ def get_presigned_url() -> Dict[str, Any]:
             }
 
         file_name = validated_data.file_name.strip()
+        srd_id = validated_data.srd_id.strip()
         # This will be None if not provided, or a string
         content_type = validated_data.content_type
 
@@ -166,6 +178,7 @@ def get_presigned_url() -> Dict[str, Any]:
         )
         presigned_url = processor.generate_presigned_url(
             file_name=file_name,
+            srd_id=srd_id,
             content_type=content_type,
             expiration=expiration_seconds,
         )

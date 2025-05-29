@@ -5,13 +5,14 @@ from typing import Optional, List
 from aws_cdk import (
     Stack,
     aws_apigatewayv2 as apigwv2,
+    aws_apigatewayv2_integrations as apigwv2_integrations,
     aws_apigatewayv2_authorizers as apigwv2_authorizers,
     aws_s3_notifications as s3n,
     aws_dynamodb as dynamodb,
+    aws_s3 as s3,
     aws_route53 as route53,
     aws_route53_targets as targets,
     aws_certificatemanager as acm,
-    aws_s3 as s3,
     aws_iam as iam,
     aws_lambda as lambda_,
     Duration,
@@ -26,10 +27,10 @@ from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
 from cdk.custom_constructs.iam_policy_statement import (
     CustomIAMPolicyStatement,
 )
-from cdk.custom_constructs.http_api import CustomHttpApiGateway
 from cdk.custom_constructs.http_lambda_authorizer import (
     CustomHttpLambdaAuthorizer,
 )
+from cdk.custom_constructs.http_api import CustomHttpApiGateway
 from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
 
 # Define Bedrock model ARNs or use wildcards for simplicity in a dev environment.
@@ -102,49 +103,68 @@ class ArcaneScribeStack(Stack):
 
         # region S3 Buckets
         # Bucket for storing uploaded PDF documents
-        self.documents_bucket = self.create_s3_bucket(
-            construct_id="DocumentsBucket",
+        documents_bucket = CustomS3Bucket(
+            self,
+            "DocumentsBucket",
             name="arcane-scribe-documents",
+            stack_suffix=self.stack_suffix,
             versioned=True,
         )
+        self.documents_bucket = documents_bucket.bucket
 
         # Bucket for storing the FAISS index and processed text
-        self.vector_store_bucket = self.create_s3_bucket(
-            construct_id="VectorStoreBucket",
+        vector_store_bucket = CustomS3Bucket(
+            self,
+            "VectorStoreBucket",
             name="arcane-scribe-vector-store",
+            stack_suffix=self.stack_suffix,
             versioned=True,
         )
+        self.vector_store_bucket = vector_store_bucket.bucket
         # endregion
 
         # region DynamoDB Tables
         # This table will store query hashes and their corresponding Bedrock-generated answers
-        self.query_cache_table = self.create_dynamodb_table(
-            construct_id="RagQueryCacheTable",
+        query_cache_table = CustomDynamoDBTable(
+            self,
+            "RagQueryCacheTable",
             name="arcane-scribe-rag-query-cache",
-            partition_key_name="query_hash",
+            partition_key=dynamodb.Attribute(
+                name="query_hash", type=dynamodb.AttributeType.STRING
+            ),
+            stack_suffix=self.stack_suffix,
+            time_to_live_attribute="ttl",
         )
+        self.query_cache_table = query_cache_table.table
         # endregion
 
         # region IAM Policies
-        self.bedrock_invoke_policy = self.create_iam_policy_statement(
-            construct_id="BedrockInvokePolicy",
+        bedrock_invoke_policy = CustomIAMPolicyStatement(
+            self,
+            "BedrockInvokePolicy",
             actions=["bedrock:InvokeModel"],
             resources=[
                 f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_EMBEDDING_MODEL_ID}",
                 f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_TEXT_GENERATION_MODEL_ID}",
             ],
         )
+        self.bedrock_invoke_policy = bedrock_invoke_policy.statement
         # endregion
 
         # region Lambda Functions
         # Lambda for generating pre-signed URLs for document uploads
-        self.presigned_url_lambda = self.create_lambda_function(
-            construct_id="PresignedUrlLambda",
+        presigned_url_lambda = CustomLambda(
+            self,
+            "PresignedUrlLambda",
             src_folder_path="as-presigned-url-generator",
+            stack_suffix=self.stack_suffix,
             environment={
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name
             },
+            memory_size=128,  # Typically small for this task
+            timeout=Duration.seconds(10),
         )
+        self.presigned_url_lambda = presigned_url_lambda.function
 
         # Grant S3 permission to the presigned URL Lambda to put objects (via
         # pre-signed URLs) to the documents bucket
@@ -152,9 +172,11 @@ class ArcaneScribeStack(Stack):
         self.documents_bucket.grant_read(self.presigned_url_lambda)
 
         # Lambda for PDF ingestion and processing
-        self.pdf_ingestor_lambda = self.create_lambda_function(
-            construct_id="PdfIngestorLambda",
+        pdf_ingestor_lambda = CustomLambda(
+            self,
+            "PdfIngestorLambda",
             src_folder_path="as-pdf-ingestor",
+            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -162,10 +184,11 @@ class ArcaneScribeStack(Stack):
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name,
                 "BEDROCK_EMBEDDING_MODEL_ID": BEDROCK_EMBEDDING_MODEL_ID,
             },
-            memory_size=1024,
-            timeout=Duration.minutes(5),
+            memory_size=1024,  # More memory for processing PDFs
+            timeout=Duration.minutes(5),  # May take longer for large PDFs
             initial_policy=[self.bedrock_invoke_policy],
         )
+        self.pdf_ingestor_lambda = pdf_ingestor_lambda.function
 
         # Grant S3 permissions for the PDF ingestor Lambda
         self.documents_bucket.grant_read(self.pdf_ingestor_lambda)
@@ -173,15 +196,17 @@ class ArcaneScribeStack(Stack):
 
         # Add S3 event notification to trigger the PDF ingestor Lambda
         self.documents_bucket.add_event_notification(
-            s3.EventType.OBJECT_CREATED,
+            s3.EventType.OBJECT_CREATED,  # Trigger any object creation
             s3n.LambdaDestination(self.pdf_ingestor_lambda),
-            s3.NotificationKeyFilter(suffix=".pdf"),
+            s3.NotificationKeyFilter(suffix=".pdf"),  # Only for PDFs
         )
 
         # Lambda for RAG queries (using Langchain)
-        self.rag_query_lambda = self.create_lambda_function(
-            construct_id="RagQueryLambda",
+        rag_query_lambda = CustomLambda(
+            self,
+            "RagQueryLambda",
             src_folder_path="as-rag-query",
+            stack_suffix=self.stack_suffix,
             environment={
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
@@ -189,13 +214,16 @@ class ArcaneScribeStack(Stack):
                 "BEDROCK_TEXT_GENERATION_MODEL_ID": (
                     BEDROCK_TEXT_GENERATION_MODEL_ID
                 ),
-                "BEDROCK_EMBEDDING_MODEL_ID": BEDROCK_EMBEDDING_MODEL_ID,
+                "BEDROCK_EMBEDDING_MODEL_ID": (
+                    BEDROCK_EMBEDDING_MODEL_ID
+                ),  # For query embedding
                 "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
             },
             memory_size=1024,  # More memory for processing queries
             timeout=Duration.seconds(60),
             initial_policy=[self.bedrock_invoke_policy],
         )
+        self.rag_query_lambda = rag_query_lambda.function
 
         # Grant S3 permissions for the RAG query Lambda
         self.vector_store_bucket.grant_read(self.rag_query_lambda)
@@ -203,57 +231,81 @@ class ArcaneScribeStack(Stack):
         # Grant DynamoDB permissions for the RAG query Lambda
         self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
 
-        # Lambda for authorizing requests to the API Gateway
-        self.authorizer_lambda = self.create_lambda_function(
-            construct_id="ArcaneScribeAuthorizerLambda",
+        authorizer_lambda = CustomLambda(
+            self,
+            "ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
                 "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
             },
         )
+        self.authorizer_lambda = authorizer_lambda.function
         # endregion
 
-        # region HTTP API Gateway
+        # region API Gateway
+        # Create an HTTP API Gateway
+        http_api = apigwv2.HttpApi(
+            self,
+            "ArcaneScribeHttpApi",
+            api_name=f"ArcaneScribeHttpApi{self.stack_suffix}",
+            cors_preflight=apigwv2.CorsPreflightOptions(
+                allow_origins=["*"],  # Adjust as needed for security
+                allow_methods=[
+                    apigwv2.CorsHttpMethod.POST,
+                    apigwv2.CorsHttpMethod.GET,
+                    apigwv2.CorsHttpMethod.OPTIONS,
+                ],
+                allow_headers=[
+                    "Content-Type",
+                    "Authorization",
+                    "X-Amz-Date",
+                    "X-Api-Key",
+                    "X-Amz-Security-Token",
+                    "X-Amz-User-Agent",
+                    "X-File-Name",
+                    "X-File-Type",
+                    final_auth_header_name,  # Custom auth header
+                ],
+                max_age=Duration.days(1),
+            ),
+        )
+
         # Create an authorizer for the HTTP API
-        self.http_lambda_authorizer = self.create_http_lambda_authorizer(
-            construct_id="ArcaneScribeHttpLambdaAuthorizer",
-            name=f"ArcaneScribeHttpLambdaAuthorizer{self.stack_suffix}",
-            authorizer_function=self.authorizer_lambda,
+        http_lambda_authorizer = apigwv2_authorizers.HttpLambdaAuthorizer(
+            "ArcaneScribeHttpLambdaAuthorizer",
+            handler=self.authorizer_lambda,
+            authorizer_name=f"ArcaneScribeHttpLambdaAuthorizer{self.stack_suffix}",
             response_types=[apigwv2_authorizers.HttpLambdaResponseType.SIMPLE],
             identity_source=[f"$request.header.{final_auth_header_name}"],
         )
 
-        # Create an HTTP API Gateway
-        self.http_api = self.create_http_api_gateway(
-            construct_id="ArcaneScribeHttpApi",
-            api_name="ArcaneScribeHttpApi",
-            allow_headers=[
-                "Content-Type",
-                "Authorization",
-                "X-Amz-Date",
-                "X-Api-Key",
-                "X-Amz-Security-Token",
-                "X-Amz-User-Agent",
-                "X-File-Name",
-                "X-File-Type",
-                final_auth_header_name,  # Custom auth header
-            ],
-            default_authorizer=self.http_lambda_authorizer,
+        # Integration for pre-signed URL generation
+        presigned_url_integration = apigwv2_integrations.HttpLambdaIntegration(
+            "PresignedUrlIntegration",
+            handler=self.presigned_url_lambda,
         )
 
         # Add a route for pre-signed URL generation
-        self.http_api.add_lambda_route(
+        http_api.add_routes(
             path="/srd/upload-url",
-            lambda_function=self.presigned_url_lambda,
             methods=[apigwv2.HttpMethod.POST],
+            integration=presigned_url_integration,
+            authorizer=http_lambda_authorizer,
+        )
+
+        # Integration for RAG queries
+        rag_query_integration = apigwv2_integrations.HttpLambdaIntegration(
+            "RagQueryIntegration",
+            handler=self.rag_query_lambda,
         )
 
         # Add a route for RAG queries
-        self.http_api.add_lambda_route(
+        http_api.add_routes(
             path="/query",
-            lambda_function=self.rag_query_lambda,
             methods=[apigwv2.HttpMethod.POST],
+            integration=rag_query_integration,
+            authorizer=http_lambda_authorizer,
         )
         # endregion
 
@@ -280,17 +332,16 @@ class ArcaneScribeStack(Stack):
         )
 
         # 4. Map HTTP API to this custom domain
-        default_stage = self.http_api.http_api.default_stage
+        default_stage = http_api.default_stage
         if not default_stage:
             raise ValueError(
-                "Default stage could not be found for API mapping. "
-                "Ensure API has a default stage or specify one."
+                "Default stage could not be found for API mapping. Ensure API has a default stage or specify one."
             )
 
         _ = apigwv2.ApiMapping(
             self,
             "ApiMapping",
-            api=self.http_api.http_api,
+            api=http_api,
             domain_name=apigw_custom_domain,
             stage=default_stage,  # Use the actual default stage object
         )
@@ -554,30 +605,26 @@ class ArcaneScribeStack(Stack):
             default_authorizer=default_authorizer,
         )
 
-    def create_api_custom_domain(self) -> ApiCustomDomain:
+    def create_api_custom_domain(
+        self, http_api: apigwv2.IHttpApi
+    ) -> ApiCustomDomain:
         """Helper method to create an API Gateway custom domain.
 
         Parameters
         ----------
-        construct_id : str
-            The ID of the construct.
-        base_domain_name : str
-            The base domain name (e.g., "example.com").
-        subdomain_part : str
-            The subdomain part (e.g., "api" or "api-dev").
         http_api : apigwv2.IHttpApi
             The HTTP API to map to the custom domain.
 
         Returns
         -------
         ApiCustomDomain
-            The created API custom domain instance.
+            The created API Gateway custom domain instance.
         """
         return ApiCustomDomain(
             scope=self,
             id="ArcaneScribeCustomDomain",
             base_domain_name=self.base_domain_name,
             subdomain_part=self.subdomain_part,
-            http_api=self.http_api.http_api,
+            http_api=http_api,
             output_name_prefix=f"ArcaneScribeCustomApi{self.stack_suffix}",
         )

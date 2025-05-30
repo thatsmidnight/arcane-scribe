@@ -55,7 +55,9 @@ def test_generate_presigned_url_success(mock_s3_client: MagicMock):
     )
 
 
-def test_generate_presigned_url_default_content_type(mock_s3_client: MagicMock):
+def test_generate_presigned_url_default_content_type(
+    mock_s3_client: MagicMock,
+):
     """Test presigned URL generation with default content type."""
     mock_s3_client.generate_presigned_url.return_value = (
         "https://test-documents-bucket.s3.amazonaws.com/default_content_url"
@@ -66,7 +68,10 @@ def test_generate_presigned_url_default_content_type(mock_s3_client: MagicMock):
 
     url = generate_presigned_url(file_name=file_name, srd_id=srd_id)
 
-    assert url == "https://test-documents-bucket.s3.amazonaws.com/default_content_url"
+    assert (
+        url
+        == "https://test-documents-bucket.s3.amazonaws.com/default_content_url"
+    )
     mock_s3_client.generate_presigned_url.assert_called_once_with(
         "put_object",
         Params={
@@ -103,9 +108,7 @@ def test_generate_presigned_url_missing_env_var():
         from presigned_url_generator import processor
 
         reload(processor)  # Force re-evaluation of module-level code
-        processor.generate_presigned_url(
-            file_name="any.pdf", srd_id="any_id"
-        )
+        processor.generate_presigned_url(file_name="any.pdf", srd_id="any_id")
 
     assert (
         "Environment variable DOCUMENTS_BUCKET_NAME must be set for S3 operations."
@@ -148,7 +151,9 @@ def test_generate_presigned_url_various_inputs(
     expected_key_format: str,
 ):
     """Test presigned URL generation with various valid inputs."""
-    expected_url = f"https://test-documents-bucket.s3.amazonaws.com/{expected_key_format}"
+    expected_url = (
+        f"https://test-documents-bucket.s3.amazonaws.com/{expected_key_format}"
+    )
     mock_s3_client.generate_presigned_url.return_value = expected_url
 
     url = generate_presigned_url(

@@ -42,9 +42,7 @@ def test_presigned_url_request_field_metadata():
     expected_metadata = {
         "file_name": {"description": "The name of the file to upload."},
         "srd_id": {"description": "The ID of the SRD document."},
-        "content_type": {
-            "description": "Optional content type for the file."
-        },
+        "content_type": {"description": "Optional content type for the file."},
     }
 
     for field_info in fields(PresignedUrlRequest):

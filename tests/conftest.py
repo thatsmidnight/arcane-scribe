@@ -95,7 +95,9 @@ def pytest_configure(config):
     # Set environment variables for testing
     os.environ["DOCUMENTS_BUCKET_NAME"] = "test-documents-bucket"
     os.environ["VECTOR_STORE_BUCKET_NAME"] = "test-vector-bucket"
-    os.environ["BEDROCK_TEXT_GENERATION_MODEL_ID"] = "amazon.titan-text-express-v1"
+    os.environ["BEDROCK_TEXT_GENERATION_MODEL_ID"] = (
+        "amazon.titan-text-express-v1"
+    )
     os.environ["BEDROCK_EMBEDDING_MODEL_ID"] = "amazon.titan-embed-text-v1"
     os.environ["QUERY_CACHE_TABLE_NAME"] = "test-query-cache-table"
 

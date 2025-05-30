@@ -62,17 +62,15 @@ def mock_lambda_logger():
 @pytest.fixture
 def mock_boto3_module_clients():
     """Mocks Boto3 clients at the processor module level."""
-    with patch.object(
-        processor, "s3_client"
-    ) as s3_client_mock, patch.object(
-        processor, "dynamodb_client"
-    ) as dynamodb_client_mock, patch.object(
-        processor, "bedrock_runtime_client"
-    ) as bedrock_runtime_client_mock, patch.object(
-        processor, "embedding_model"
-    ) as embedding_model_mock, patch.object(
-        processor, "logger"
-    ) as logger_mock:
+    with (
+        patch.object(processor, "s3_client") as s3_client_mock,
+        patch.object(processor, "dynamodb_client") as dynamodb_client_mock,
+        patch.object(
+            processor, "bedrock_runtime_client"
+        ) as bedrock_runtime_client_mock,
+        patch.object(processor, "embedding_model") as embedding_model_mock,
+        patch.object(processor, "logger") as logger_mock,
+    ):
         yield {
             "s3": s3_client_mock,
             "dynamodb": dynamodb_client_mock,
@@ -254,17 +252,66 @@ class TestGetLlmInstance:
     @pytest.mark.parametrize(
         "param,invalid_value,expected_warning_part",
         [
-            pytest.param("temperature", "not_a_float", "Invalid temperature value", id="temp_not_float"),
-            pytest.param("temperature", -0.1, "Invalid temperature value", id="temp_negative"),
-            pytest.param("temperature", 1.1, "Invalid temperature value", id="temp_above_one"),
-            pytest.param("topP", "not_a_float", "Invalid topP value", id="topP_not_float"),
-            pytest.param("topP", -0.1, "Invalid topP value", id="topP_negative"),
-            pytest.param("topP", 1.1, "Invalid topP value", id="topP_above_one"),
-            pytest.param("maxTokenCount", "not_an_int", "Invalid maxTokenCount", id="maxTokenCount_not_int"),
-            pytest.param("maxTokenCount", -10, "Invalid maxTokenCount", id="maxTokenCount_negative"),
-            pytest.param("maxTokenCount", 9000, "Invalid maxTokenCount", id="maxTokenCount_above_limit"),
-            pytest.param("stopSequences", "not_a_list", "Invalid stopSequences", id="stopSequences_not_list"),
-            pytest.param("stopSequences", [123], "Invalid stopSequences", id="stopSequences_not_str"),
+            pytest.param(
+                "temperature",
+                "not_a_float",
+                "Invalid temperature value",
+                id="temp_not_float",
+            ),
+            pytest.param(
+                "temperature",
+                -0.1,
+                "Invalid temperature value",
+                id="temp_negative",
+            ),
+            pytest.param(
+                "temperature",
+                1.1,
+                "Invalid temperature value",
+                id="temp_above_one",
+            ),
+            pytest.param(
+                "topP",
+                "not_a_float",
+                "Invalid topP value",
+                id="topP_not_float",
+            ),
+            pytest.param(
+                "topP", -0.1, "Invalid topP value", id="topP_negative"
+            ),
+            pytest.param(
+                "topP", 1.1, "Invalid topP value", id="topP_above_one"
+            ),
+            pytest.param(
+                "maxTokenCount",
+                "not_an_int",
+                "Invalid maxTokenCount",
+                id="maxTokenCount_not_int",
+            ),
+            pytest.param(
+                "maxTokenCount",
+                -10,
+                "Invalid maxTokenCount",
+                id="maxTokenCount_negative",
+            ),
+            pytest.param(
+                "maxTokenCount",
+                9000,
+                "Invalid maxTokenCount",
+                id="maxTokenCount_above_limit",
+            ),
+            pytest.param(
+                "stopSequences",
+                "not_a_list",
+                "Invalid stopSequences",
+                id="stopSequences_not_list",
+            ),
+            pytest.param(
+                "stopSequences",
+                [123],
+                "Invalid stopSequences",
+                id="stopSequences_not_str",
+            ),
         ],
     )
     def test_get_llm_instance_invalid_params_warns_and_omits_param(
@@ -707,19 +754,13 @@ class TestGetAnswerFromRag:
         "ttl_item_data,log_message_part",
         [
             pytest.param(  # TTL field completely missing
-                {
-                    "answer": {
-                        "S": "cached_bad_ttl_value"
-                    }
-                },
+                {"answer": {"S": "cached_bad_ttl_value"}},
                 "Performing similarity search for query: 'q_ttl_err'",
                 id="ttl_missing",
             ),
             pytest.param(  # TTL field wrong type (not 'N')
                 {
-                    "answer": {
-                        "S": "cached_bad_ttl_value"
-                    },
+                    "answer": {"S": "cached_bad_ttl_value"},
                     "ttl": {"S": "not_a_number_string_type_for_ttl"},
                 },
                 "Error processing cache item: 'N'. Proceeding without cache.",
@@ -727,9 +768,7 @@ class TestGetAnswerFromRag:
             ),
             pytest.param(  # TTL field is 'N' but not a number string
                 {
-                    "answer": {
-                        "S": "cached_bad_ttl_value"
-                    },
+                    "answer": {"S": "cached_bad_ttl_value"},
                     "ttl": {"N": "not_a_number"},
                 },
                 "Error processing cache item: invalid literal for int() with base 10: 'not_a_number'. Proceeding without cache.",
@@ -837,7 +876,10 @@ class TestGetAnswerFromRag:
             "q_llm", "srd", True, False, {}, mock_lambda_logger
         )
         assert "error" in result
-        assert "Internal server error: Generative LLM component could not be configured." in result["error"]
+        assert (
+            "Internal server error: Generative LLM component could not be configured."
+            in result["error"]
+        )
 
     @pytest.mark.parametrize("conversational", [True, False])
     def test_llm_invocation_success(self, conversational, mock_lambda_logger):
@@ -887,7 +929,10 @@ class TestGetAnswerFromRag:
             "q_llm", "srd", True, False, {}, mock_lambda_logger
         )
         assert "error" in result
-        assert "Failed to generate an answer using the RAG chain." in result["error"]
+        assert (
+            "Failed to generate an answer using the RAG chain."
+            in result["error"]
+        )
         mock_lambda_logger.exception.assert_any_call(
             "Error during RAG chain execution: Chain error"
         )

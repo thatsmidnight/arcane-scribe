@@ -41,11 +41,11 @@ def mock_app(handler_module: MagicMock) -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture
-def mock_processor(handler_module: MagicMock) -> Generator[MagicMock, None, None]:
+def mock_processor(
+    handler_module: MagicMock,
+) -> Generator[MagicMock, None, None]:
     """Mock the processor module used by the handler."""
-    with patch.object(
-        handler_module, "processor"
-    ) as mock_processor_instance:
+    with patch.object(handler_module, "processor") as mock_processor_instance:
         # Mock attributes checked by the handler
         mock_processor_instance.s3_client = MagicMock()
         mock_processor_instance.embedding_model = MagicMock()
@@ -172,13 +172,48 @@ class TestRagQueryHandler:
     @pytest.mark.parametrize(
         "body_input,expected_error_message,expected_status_code",
         [
-            pytest.param("not_a_dict", "Request body must be a JSON object.", 400, id="not_a_dict"),
-            pytest.param({"srd_id": "srd1"}, "Query text is required.", 400, id="missing_query_text"),
-            pytest.param({"query_text": "  ", "srd_id": "srd1"}, "Query text is required.", 400, id="empty_query_text"),
-            pytest.param({"query_text": 123, "srd_id": "srd1"}, "Query text is required.", 400, id="query_text_not_str"),
-            pytest.param({"query_text": "Q"}, "Could not load SRD data for 'dnd5e_srd'.", 404, id="missing_srd_id"),
-            pytest.param({"query_text": "Q", "srd_id": "  "}, "SRD ID is required.", 400, id="empty_srd_id"),
-            pytest.param({"query_text": "Q", "srd_id": 123}, "SRD ID is required.", 400, id="srd_id_not_str"),
+            pytest.param(
+                "not_a_dict",
+                "Request body must be a JSON object.",
+                400,
+                id="not_a_dict",
+            ),
+            pytest.param(
+                {"srd_id": "srd1"},
+                "Query text is required.",
+                400,
+                id="missing_query_text",
+            ),
+            pytest.param(
+                {"query_text": "  ", "srd_id": "srd1"},
+                "Query text is required.",
+                400,
+                id="empty_query_text",
+            ),
+            pytest.param(
+                {"query_text": 123, "srd_id": "srd1"},
+                "Query text is required.",
+                400,
+                id="query_text_not_str",
+            ),
+            pytest.param(
+                {"query_text": "Q"},
+                "Could not load SRD data for 'dnd5e_srd'.",
+                404,
+                id="missing_srd_id",
+            ),
+            pytest.param(
+                {"query_text": "Q", "srd_id": "  "},
+                "SRD ID is required.",
+                400,
+                id="empty_srd_id",
+            ),
+            pytest.param(
+                {"query_text": "Q", "srd_id": 123},
+                "SRD ID is required.",
+                400,
+                id="srd_id_not_str",
+            ),
         ],
     )
     def test_query_endpoint_invalid_input(
@@ -265,7 +300,9 @@ class TestRagQueryHandler:
         mock_logger: MagicMock,
     ):
         """Test query_endpoint with a general exception during processing."""
-        mock_app.current_event.json_body = MagicMock()  # Simulate a non-JSON body
+        mock_app.current_event.json_body = (
+            MagicMock()
+        )  # Simulate a non-JSON body
 
         result = handler_module.query_endpoint()
         assert result["statusCode"] == 400
@@ -281,7 +318,9 @@ class TestRagQueryHandler:
                 id="srd_data_not_found",
             ),
             pytest.param(
-                {"error": "Knowledge base components not ready for SRD: some_srd"},
+                {
+                    "error": "Knowledge base components not ready for SRD: some_srd"
+                },
                 503,
                 id="components_not_ready",
             ),
@@ -331,18 +370,26 @@ class TestRagQueryHandler:
         self,
         handler_module: MagicMock,
         mock_app: MagicMock,
-        mock_processor: MagicMock  # Keep processor mocked to avoid other errors
+        mock_processor: MagicMock,  # Keep processor mocked to avoid other errors
     ):
         """
         Test that a NameError for 'json' occurs if not imported in handler.
         This test relies on json.dumps being called in an error path.
         """
         # Trigger an error path that calls json.dumps
-        mock_processor.s3_client = None  # Causes 500 error, which calls json.dumps
+        mock_processor.s3_client = (
+            None  # Causes 500 error, which calls json.dumps
+        )
 
         # If 'json' is not imported in handler.py, this call will raise NameError
         # We are testing the handler's robustness / completeness of imports.
-        with patch.dict(handler_module.__dict__, {"json": NameError("json is not defined")}), pytest.raises(NameError):
+        with (
+            patch.dict(
+                handler_module.__dict__,
+                {"json": NameError("json is not defined")},
+            ),
+            pytest.raises(NameError),
+        ):
             # Temporarily remove 'json' from the handler's scope if it was auto-imported or mocked in
             if "json" in handler_module.__dict__:
                 original_json = handler_module.json
@@ -352,5 +399,7 @@ class TestRagQueryHandler:
                 finally:
                     handler_module.json = original_json  # Restore
             else:  # if json was never in its dict (e.g. truly not imported)
-                with pytest.raises(NameError, match="name 'json' is not defined"):
+                with pytest.raises(
+                    NameError, match="name 'json' is not defined"
+                ):
                     handler_module.query_endpoint()

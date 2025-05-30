@@ -5,6 +5,10 @@ on:
     branches:
       - 'feature/**'  # Trigger on pushes to branches starting with 'feature/'
       - 'main'  # Also allow manual trigger or push for main if needed for testing this workflow
+  pull_request:
+    types: [closed]
+    branches:
+      - 'main'  # Trigger cleanup when PR is closed (merged or closed without merge)
 
 permissions:
   id-token: write  # Required for OIDC if we switch to it
@@ -12,6 +16,7 @@ permissions:
 
 jobs:
   deploy_stack:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: feature-deployment  # Optional: Define a GitHub environment for feature deployments
 
@@ -130,11 +135,109 @@ jobs:
             -q
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
-          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
-
-      - name: CDK Deploy
+          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}      - name: CDK Deploy
         run: |
           poetry run cdk deploy --all --require-approval never \
+            --context stack-suffix=${{ env.STACK_SUFFIX }} \
+            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
+            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+        env:
+          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
+          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+
+  cleanup_stack:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    environment: feature-deployment
+
+    steps:
+      # ------------------------------
+      # Checkout and Setup
+      # ------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ------------------------------
+      # Poetry and Dependency Management
+      # ------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '2.1.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          virtualenvs-path: .venv
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install dependencies (if cache miss)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      # ------------------------------
+      # Configure AWS and CDK
+      # ------------------------------
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+
+      # ------------------------------
+      # Determine Stack Suffix for Cleanup
+      # ------------------------------
+      - name: Determine Stack Suffix for Cleanup
+        id: cleanup-branch-info
+        run: |
+          # Extract the feature branch name from the PR head ref
+          BRANCH_FULL_NAME="${{ github.event.pull_request.head.ref }}"
+          echo "PR head branch name: ${BRANCH_FULL_NAME}"
+
+          # Extract the part after 'feature/' if it's a feature branch
+          if [[ "${BRANCH_FULL_NAME}" == feature/* ]]; then
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME#feature/}
+          else
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME}
+          fi
+          echo "Name part for suffix: ${FEATURE_NAME_PART}"
+
+          # Sanitize: replace any slashes with hyphens and convert to lowercase
+          SANITIZED_NAME=$(echo "${FEATURE_NAME_PART}" | sed 's/\//-/g' | tr '[:upper:]' '[:lower:]')
+          echo "Sanitized name: ${SANITIZED_NAME}"
+
+          # Create the same suffix that was used during deployment
+          STACK_SUFFIX=$(echo "${SANITIZED_NAME}" | cut -c1-20)
+          
+          # Set STACK_SUFFIX to empty string if it evaluates to "main"
+          if [[ "${STACK_SUFFIX}" == "main" ]]; then
+            STACK_SUFFIX=""
+          fi
+          
+          echo "Stack suffix for cleanup: ${STACK_SUFFIX}"
+          echo "STACK_SUFFIX=${STACK_SUFFIX}" >> $GITHUB_ENV
+
+      # ------------------------------
+      # Cleanup CDK Stack
+      # ------------------------------
+      - name: CDK Destroy Feature Branch Stack
+        run: |
+          echo "Destroying CDK stack with suffix: ${{ env.STACK_SUFFIX }}"
+          poetry run cdk destroy --all --force \
             --context stack-suffix=${{ env.STACK_SUFFIX }} \
             --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
             --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}

@@ -66,6 +66,7 @@ jobs:
 
   quality_checks:
     if: github.event_name == 'push'
+    needs: [setup]
     runs-on: ubuntu-latest
     strategy:
       matrix:

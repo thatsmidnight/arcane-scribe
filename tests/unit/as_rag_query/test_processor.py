@@ -90,9 +90,7 @@ def setup_cache_table(mocked_dynamodb):
     """Setup the query cache table for processor tests."""
     mocked_dynamodb.create_table(
         TableName="test-query-cache-table",
-        KeySchema=[
-            {"AttributeName": "query_hash_srd_id", "KeyType": "HASH"}
-        ],
+        KeySchema=[{"AttributeName": "query_hash_srd_id", "KeyType": "HASH"}],
         AttributeDefinitions=[
             {"AttributeName": "query_hash_srd_id", "AttributeType": "S"}
         ],

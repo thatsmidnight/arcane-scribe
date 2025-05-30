@@ -91,7 +91,9 @@ class TestAuthorizerHandler:
             EXPECTED_HEADER_VALUE="valid-secret-key",
         ):
             # Add the expected header to the event
-            sample_api_gateway_event["headers"]["x-api-key"] = "valid-secret-key"
+            sample_api_gateway_event["headers"][
+                "x-api-key"
+            ] = "valid-secret-key"
 
             result = handler_module.lambda_handler(
                 sample_api_gateway_event, sample_lambda_context
@@ -122,7 +124,9 @@ class TestAuthorizerHandler:
             EXPECTED_HEADER_VALUE="valid-secret-key",
         ):
             # Add header with different case
-            sample_api_gateway_event["headers"]["X-API-KEY"] = "valid-secret-key"
+            sample_api_gateway_event["headers"][
+                "X-API-KEY"
+            ] = "valid-secret-key"
 
             result = handler_module.lambda_handler(
                 sample_api_gateway_event, sample_lambda_context
@@ -281,7 +285,13 @@ class TestAuthorizerHandler:
         [
             ("x-api-key", "secret123", "x-api-key", "secret123", True),
             ("X-API-KEY", "secret123", "x-api-key", "secret123", True),
-            ("Authorization", "Bearer token", "authorization", "Bearer token", True),
+            (
+                "Authorization",
+                "Bearer token",
+                "authorization",
+                "Bearer token",
+                True,
+            ),
             ("custom-auth", "value", "custom-auth", "value", True),
             ("x-api-key", "wrong", "x-api-key", "secret123", False),
             ("wrong-header", "secret123", "x-api-key", "secret123", False),

@@ -103,7 +103,9 @@ def test_lambda_handler_success_single_pdf(
     }
     mock_processor.process_s3_object.return_value = expected_result
 
-    result = handler_module.lambda_handler(sample_s3_event, sample_lambda_context)
+    result = handler_module.lambda_handler(
+        sample_s3_event, sample_lambda_context
+    )
 
     assert result == {"results": [expected_result]}
     mock_processor.process_s3_object.assert_called_once_with(
@@ -329,7 +331,9 @@ def test_lambda_handler_processor_exception(
     error_message = "Failed to process PDF document"
     mock_processor.process_s3_object.side_effect = Exception(error_message)
 
-    result = handler_module.lambda_handler(sample_s3_event, sample_lambda_context)
+    result = handler_module.lambda_handler(
+        sample_s3_event, sample_lambda_context
+    )
 
     expected_error_result = {
         "error": error_message,
@@ -504,7 +508,9 @@ def test_lambda_handler_logging_context_injection(
     assert hasattr(handler_func, "__wrapped__")
 
     # The actual behavior testing is covered in other tests
-    result = handler_module.lambda_handler(sample_s3_event, sample_lambda_context)
+    result = handler_module.lambda_handler(
+        sample_s3_event, sample_lambda_context
+    )
 
     assert "results" in result
     assert isinstance(result["results"], list)

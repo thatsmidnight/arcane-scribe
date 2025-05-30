@@ -205,6 +205,9 @@ jobs:
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+          CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
 
   deploy_stack:
     if: github.event_name == 'push'
@@ -278,6 +281,9 @@ jobs:
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+          CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
 
   cleanup_stack:
     if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
@@ -378,3 +384,6 @@ jobs:
         env:
           CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
           CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+          CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
+          AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden

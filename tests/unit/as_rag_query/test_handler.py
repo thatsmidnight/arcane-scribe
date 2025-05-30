@@ -1,5 +1,3 @@
-"""Unit tests for the RAG query handler module."""
-
 # Standard Library
 import json
 from typing import Generator, Any, Dict

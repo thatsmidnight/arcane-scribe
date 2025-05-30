@@ -1,5 +1,3 @@
-"""Unit tests for the presigned_url_generator.processor module."""
-
 # Standard Library
 import os
 from unittest.mock import patch, MagicMock

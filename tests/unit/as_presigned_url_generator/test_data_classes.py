@@ -1,5 +1,3 @@
-"""Unit tests for the presigned_url_generator.data_classes module."""
-
 # Standard Library
 from dataclasses import fields
 

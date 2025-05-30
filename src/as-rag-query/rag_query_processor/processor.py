@@ -94,13 +94,8 @@ def get_llm_instance(
     """
     global _default_llm_instance  # Can be used if no dynamic config provided
 
-    # Set default model kwargs for LLM
-    effective_model_kwargs = {
-        "temperature": 0.1,
-        "maxTokenCount": 1024,
-        "topP": None,  # Default to Bedrock's internal default if not set
-        "stopSequences": None,  # Default to Bedrock's internal default if not set
-    }
+    # Initialize the model kwargs as an empty dictionary
+    effective_model_kwargs = {}
 
     # Validate and merge client-provided generation_config
     if "temperature" in generation_config:

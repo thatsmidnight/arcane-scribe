@@ -144,7 +144,12 @@ class TestRagQueryHandler:
         assert result["statusCode"] == 200
         assert json.loads(result["body"]) == {"answer": "Success!"}
         mock_processor.get_answer_from_rag.assert_called_once_with(
-            "Test query?", "test_srd_123", True, mock_logger
+            query_text="Test query?",
+            srd_id="test_srd_123",
+            invoke_generative_llm=True,
+            use_conversational_style=False,
+            generation_config_payload={},
+            lambda_logger=mock_logger,
         )
 
     def test_query_endpoint_processor_not_initialized(
@@ -221,10 +226,12 @@ class TestRagQueryHandler:
         handler_module.query_endpoint()
 
         mock_processor.get_answer_from_rag.assert_called_once_with(
-            "Default test?",
-            mock_processor.DEFAULT_SRD_ID,  # Check default SRD ID is used
-            False,  # Check default invoke_generative_llm is False
-            mock_logger,
+            query_text="Default test?",
+            srd_id="default_srd_id_value",
+            invoke_generative_llm=False,
+            use_conversational_style=False,
+            generation_config_payload={},
+            lambda_logger=mock_logger,
         )
 
     def test_query_endpoint_invoke_llm_invalid_type_defaults_to_false(
@@ -243,7 +250,12 @@ class TestRagQueryHandler:
 
         handler_module.query_endpoint()
         mock_processor.get_answer_from_rag.assert_called_once_with(
-            "Test query", "test_srd", False, mock_logger
+            query_text="Test query",
+            srd_id="test_srd",
+            invoke_generative_llm=False,
+            use_conversational_style=False,
+            generation_config_payload={},
+            lambda_logger=mock_logger,
         )
 
     def test_query_endpoint_general_exception(

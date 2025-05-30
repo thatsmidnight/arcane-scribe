@@ -15,8 +15,186 @@ permissions:
   contents: read
 
 jobs:
+  setup:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      stack-suffix: ${{ steps.branch-info.outputs.stack-suffix }}
+
+    steps:
+      # ------------------------------
+      # Checkout and Setup
+      # ------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ------------------------------
+      # Determine Branch Name and Stack Suffix
+      # ------------------------------
+      - name: Determine Branch Name and Stack Suffix
+        id: branch-info
+        run: |
+          # Get the full branch name (e.g., feature/my-task or main)
+          BRANCH_FULL_NAME=${{ github.ref_name }}
+          echo "Full branch name from github.ref_name: ${BRANCH_FULL_NAME}"
+
+          # Extract the part after 'feature/' if it's a feature branch
+          if [[ "${BRANCH_FULL_NAME}" == feature/* ]]; then
+            # Use substring removal: ${string#prefix}
+            # This removes 'feature/' from the beginning of BRANCH_FULL_NAME
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME#feature/}
+          else
+            # For other branches (e.g., main), use the full branch name
+            FEATURE_NAME_PART=${BRANCH_FULL_NAME}
+          fi
+          echo "Name part for suffix: ${FEATURE_NAME_PART}"
+
+          # Sanitize: replace any slashes (e.g., if feature_name_part was 'foo/bar') with hyphens
+          SANITIZED_NAME=$(echo "${FEATURE_NAME_PART}" | sed 's/\//-/g' | tr '[:upper:]' '[:lower:]') # also convert to lowercase
+          echo "Sanitized name: ${SANITIZED_NAME}"          # Create a shorter, safer suffix for stack names (max 20 chars as previously)
+          # CloudFormation stack names can be up to 128 chars, but resource names derived from it might have stricter limits.
+          # S3 bucket names also have length limits and character restrictions (e.g. no underscores, lowercase).
+          STACK_SUFFIX=$(echo "${SANITIZED_NAME}" | cut -c1-20)
+          
+          # Set STACK_SUFFIX to empty string if it evaluates to "main"
+          if [[ "${STACK_SUFFIX}" == "main" ]]; then
+            STACK_SUFFIX=""
+          fi
+          
+          echo "Final STACK_SUFFIX: ${STACK_SUFFIX}"
+          echo "stack-suffix=${STACK_SUFFIX}" >> $GITHUB_OUTPUT
+
+  quality_checks:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        check-type: [lint, test]
+
+    steps:
+      # ------------------------------
+      # Checkout and Setup
+      # ------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ------------------------------
+      # Poetry and Dependency Management
+      # ------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '2.1.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true  # Recommended for CI caching
+          virtualenvs-path: .venv
+          installer-parallel: true
+
+      # ------------------------------
+      # Load Cached Dependencies
+      # ------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      # ------------------------------
+      # Install Dependencies if Cache Miss
+      # ------------------------------
+      - name: Install dependencies (if cache miss)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      # ------------------------------
+      # Run Quality Checks
+      # ------------------------------
+      - name: Run linters
+        if: matrix.check-type == 'lint'
+        run: |
+          poetry run flake8 src/ -v
+          poetry run black --check src/
+          poetry run isort --check src/
+
+      - name: Run tests
+        if: matrix.check-type == 'test'
+        run: poetry run nox
+
+  cdk_synth:
+    if: github.event_name == 'push'
+    needs: [setup, quality_checks]
+    runs-on: ubuntu-latest
+
+    steps:
+      # ------------------------------
+      # Checkout and Setup
+      # ------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # ------------------------------
+      # Poetry and Dependency Management
+      # ------------------------------
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: '2.1.3'
+          virtualenvs-create: true
+          virtualenvs-in-project: true  # Recommended for CI caching
+          virtualenvs-path: .venv
+          installer-parallel: true
+
+      # ------------------------------
+      # Load Cached Dependencies
+      # ------------------------------
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+      # ------------------------------
+      # Install Dependencies if Cache Miss
+      # ------------------------------
+      - name: Install dependencies (if cache miss)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction --no-root
+
+      # ------------------------------
+      # Install AWS CDK
+      # ------------------------------
+      - name: Install AWS CDK CLI
+        run: npm install -g aws-cdk
+
+      # ------------------------------
+      # CDK Synth
+      # ------------------------------
+      - name: CDK Synth
+        run: |
+          poetry run cdk synth \
+            --context stack-suffix=${{ needs.setup.outputs.stack-suffix }} \
+            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
+            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} \
+            -q
+        env:
+          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
+          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+
   deploy_stack:
     if: github.event_name == 'push'
+    needs: [setup, quality_checks, cdk_synth]
     runs-on: ubuntu-latest
     environment: feature-deployment  # Optional: Define a GitHub environment for feature deployments
 
@@ -75,70 +253,12 @@ jobs:
           aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
 
       # ------------------------------
-      # Determine Branch Name and Stack Suffix
+      # CDK Deploy
       # ------------------------------
-      - name: Determine Branch Name and Stack Suffix
-        id: branch-info
-        run: |
-          # Get the full branch name (e.g., feature/my-task or main)
-          BRANCH_FULL_NAME=${{ github.ref_name }}
-          echo "Full branch name from github.ref_name: ${BRANCH_FULL_NAME}"
-
-          # Extract the part after 'feature/' if it's a feature branch
-          if [[ "${BRANCH_FULL_NAME}" == feature/* ]]; then
-            # Use substring removal: ${string#prefix}
-            # This removes 'feature/' from the beginning of BRANCH_FULL_NAME
-            FEATURE_NAME_PART=${BRANCH_FULL_NAME#feature/}
-          else
-            # For other branches (e.g., main), use the full branch name
-            FEATURE_NAME_PART=${BRANCH_FULL_NAME}
-          fi
-          echo "Name part for suffix: ${FEATURE_NAME_PART}"
-
-          # Sanitize: replace any slashes (e.g., if feature_name_part was 'foo/bar') with hyphens
-          SANITIZED_NAME=$(echo "${FEATURE_NAME_PART}" | sed 's/\//-/g' | tr '[:upper:]' '[:lower:]') # also convert to lowercase
-          echo "Sanitized name: ${SANITIZED_NAME}"          # Create a shorter, safer suffix for stack names (max 20 chars as previously)
-          # CloudFormation stack names can be up to 128 chars, but resource names derived from it might have stricter limits.
-          # S3 bucket names also have length limits and character restrictions (e.g. no underscores, lowercase).
-          STACK_SUFFIX=$(echo "${SANITIZED_NAME}" | cut -c1-20)
-          
-          # Set STACK_SUFFIX to empty string if it evaluates to "main"
-          if [[ "${STACK_SUFFIX}" == "main" ]]; then
-            STACK_SUFFIX=""
-          fi
-          
-          echo "Final STACK_SUFFIX: ${STACK_SUFFIX}"
-
-          echo "STACK_SUFFIX=${STACK_SUFFIX}" >> $GITHUB_ENV
-
-      # ------------------------------
-      # Run Linters and Tests
-      # ------------------------------
-      - name: Run linters
-        run: |
-          poetry run flake8 src/ -v
-          poetry run black --check src/
-          poetry run isort --check src/
-
-      - name: Run tests
-        run: poetry run nox
-
-      # ------------------------------
-      # CDK Commands
-      # ------------------------------
-      - name: CDK Synth
-        run: |
-          poetry run cdk synth \
-            --context stack-suffix=${{ env.STACK_SUFFIX }} \
-            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} \
-            -q
-        env:
-          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
-          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}      - name: CDK Deploy
+      - name: CDK Deploy
         run: |
           poetry run cdk deploy --all --require-approval never \
-            --context stack-suffix=${{ env.STACK_SUFFIX }} \
+            --context stack-suffix=${{ needs.setup.outputs.stack-suffix }} \
             --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
             --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
         env:

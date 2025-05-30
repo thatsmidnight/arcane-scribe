@@ -74,7 +74,22 @@ _default_llm_instance = None
 
 
 def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]:
-    """Creates or reuses a ChatBedrock instance with provided generation_config."""
+    """Get a ChatBedrock instance configured with the provided generation config.
+    This function validates the generation_config parameters and applies them
+    to the ChatBedrock instance. If the configuration is invalid or if the
+    ChatBedrock instance cannot be created, it will return the default instance
+    if available, or None if no default instance is set.
+
+    Parameters
+    ----------
+    generation_config : Dict[str, Any]
+        _description_
+
+    Returns
+    -------
+    Optional[ChatBedrock]
+        _description_
+    """
     global _default_llm_instance  # Can be used if no dynamic config provided
 
     # Set default model kwargs for LLM
@@ -130,9 +145,18 @@ def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]
         )
         logger.info(f"ChatBedrock instance configured with: {effective_model_kwargs}")
         return current_llm
+    # Return the default instance if available
     except Exception as e_llm_init:
         logger.exception(f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}")
-        return None
+        _default_llm_instance = ChatBedrock(
+            client=bedrock_runtime_client,
+            model=BEDROCK_TEXT_GENERATION_MODEL_ID,
+            model_kwargs={
+                "temperature": 0.1,
+                "maxTokenCount": 1024,
+            },
+        )
+        return _default_llm_instance  # Return the default instance if dynamic config fails
 
 
 def _load_faiss_index_from_s3(

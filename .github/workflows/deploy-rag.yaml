@@ -92,12 +92,16 @@ jobs:
 
           # Sanitize: replace any slashes (e.g., if feature_name_part was 'foo/bar') with hyphens
           SANITIZED_NAME=$(echo "${FEATURE_NAME_PART}" | sed 's/\//-/g' | tr '[:upper:]' '[:lower:]') # also convert to lowercase
-          echo "Sanitized name: ${SANITIZED_NAME}"
-
-          # Create a shorter, safer suffix for stack names (max 20 chars as previously)
+          echo "Sanitized name: ${SANITIZED_NAME}"          # Create a shorter, safer suffix for stack names (max 20 chars as previously)
           # CloudFormation stack names can be up to 128 chars, but resource names derived from it might have stricter limits.
           # S3 bucket names also have length limits and character restrictions (e.g. no underscores, lowercase).
           STACK_SUFFIX=$(echo "${SANITIZED_NAME}" | cut -c1-20)
+          
+          # Set STACK_SUFFIX to empty string if it evaluates to "main"
+          if [[ "${STACK_SUFFIX}" == "main" ]]; then
+            STACK_SUFFIX=""
+          fi
+          
           echo "Final STACK_SUFFIX: ${STACK_SUFFIX}"
 
           echo "STACK_SUFFIX=${STACK_SUFFIX}" >> $GITHUB_ENV

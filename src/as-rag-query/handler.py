@@ -163,7 +163,7 @@ def query_endpoint() -> Dict[str, Any]:
             invoke_generative_llm=invoke_generative_llm,
             use_conversational_style=use_conversational_style,
             generation_config_payload=generation_config_payload,
-            lambda_logger=logger
+            lambda_logger=logger,
         )
 
         # Check if the result contains an error

@@ -73,7 +73,9 @@ except Exception as e:
 _default_llm_instance = None
 
 
-def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]:
+def get_llm_instance(
+    generation_config: Dict[str, Any],
+) -> Optional[ChatBedrock]:
     """Get a ChatBedrock instance configured with the provided generation config.
     This function validates the generation_config parameters and applies them
     to the ChatBedrock instance. If the configuration is invalid or if the
@@ -97,7 +99,7 @@ def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]
         "temperature": 0.1,
         "maxTokenCount": 1024,
         "topP": None,  # Default to Bedrock's internal default if not set
-        "stopSequences": None  # Default to Bedrock's internal default if not set
+        "stopSequences": None,  # Default to Bedrock's internal default if not set
     }
 
     # Validate and merge client-provided generation_config
@@ -106,7 +108,9 @@ def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]
         if isinstance(temp, (float, int)) and 0.0 <= temp <= 1.0:
             effective_model_kwargs["temperature"] = float(temp)
         else:
-            logger.warning(f"Invalid temperature value: {temp}. Using default.")
+            logger.warning(
+                f"Invalid temperature value: {temp}. Using default."
+            )
 
     if "topP" in generation_config:
         top_p_val = generation_config["topP"]
@@ -115,7 +119,9 @@ def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]
         else:
             logger.warning(f"Invalid topP value: {top_p_val}. Using default.")
 
-    if "maxTokenCount" in generation_config:  # Note: Bedrock API uses "maxTokenCount"
+    if (
+        "maxTokenCount" in generation_config
+    ):  # Note: Bedrock API uses "maxTokenCount"
         max_tokens = generation_config["maxTokenCount"]
         # Titan Text Express max is 8192, Lite is 4096
         # Assuming BEDROCK_TEXT_GENERATION_MODEL_ID is Express or Lite
@@ -123,31 +129,45 @@ def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]
         if isinstance(max_tokens, int) and 0 <= max_tokens <= 8192:
             effective_model_kwargs["maxTokenCount"] = max_tokens
         else:
-            logger.warning(f"Invalid maxTokenCount: {max_tokens}. Using default or Bedrock's max.")
+            logger.warning(
+                f"Invalid maxTokenCount: {max_tokens}. Using default or Bedrock's max."
+            )
             # Do not set maxTokenCount if invalid to let Bedrock use its internal default or max.
             # Or, set to a known safe default like 1024 if you prefer explicit control.
-            if "maxTokenCount" in effective_model_kwargs and not (isinstance(max_tokens, int) and 0 <= max_tokens <= 8192):
-                del effective_model_kwargs["maxTokenCount"]  # remove if invalid, let model default
+            if "maxTokenCount" in effective_model_kwargs and not (
+                isinstance(max_tokens, int) and 0 <= max_tokens <= 8192
+            ):
+                del effective_model_kwargs[
+                    "maxTokenCount"
+                ]  # remove if invalid, let model default
 
     if "stopSequences" in generation_config:
         stop_seqs = generation_config["stopSequences"]
-        if isinstance(stop_seqs, list) and all(isinstance(s, str) for s in stop_seqs):
+        if isinstance(stop_seqs, list) and all(
+            isinstance(s, str) for s in stop_seqs
+        ):
             effective_model_kwargs["stopSequences"] = stop_seqs
         else:
-            logger.warning(f"Invalid stopSequences: {stop_seqs}. Ignoring client value.")
+            logger.warning(
+                f"Invalid stopSequences: {stop_seqs}. Ignoring client value."
+            )
 
     # Create ChatBedrock instance with effective model kwargs
     try:
         current_llm = ChatBedrock(
             client=bedrock_runtime_client,
             model=BEDROCK_TEXT_GENERATION_MODEL_ID,
-            model_kwargs=effective_model_kwargs
+            model_kwargs=effective_model_kwargs,
         )
-        logger.info(f"ChatBedrock instance configured with: {effective_model_kwargs}")
+        logger.info(
+            f"ChatBedrock instance configured with: {effective_model_kwargs}"
+        )
         return current_llm
     # Return the default instance if available
     except Exception as e_llm_init:
-        logger.exception(f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}")
+        logger.exception(
+            f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}"
+        )
         _default_llm_instance = ChatBedrock(
             client=bedrock_runtime_client,
             model=BEDROCK_TEXT_GENERATION_MODEL_ID,
@@ -464,11 +484,11 @@ Helpful Answer:"""
                         },
                         "timestamp": {"S": str(time.time())},
                         "ttl": {"N": str(ttl_value)},
-                        'generation_config_used': {
-                            'S': json.dumps(generation_config_payload)
+                        "generation_config_used": {
+                            "S": json.dumps(generation_config_payload)
                         },
-                        'was_conversational': {
-                            'BOOL': use_conversational_style
+                        "was_conversational": {
+                            "BOOL": use_conversational_style
                         },
                     },
                 )

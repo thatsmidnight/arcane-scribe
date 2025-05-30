@@ -222,6 +222,7 @@ class TestRagQueryHandler:
         body_input: Any,
         expected_error_message: str,
         expected_status_code: int,
+        mocked_bedrock_runtime: MagicMock,
     ):
         """Test query_endpoint with various invalid input scenarios."""
         if isinstance(body_input, str) and body_input == "not_a_dict":
@@ -296,6 +297,7 @@ class TestRagQueryHandler:
         handler_module: MagicMock,
         mock_app: MagicMock,
         mock_logger: MagicMock,
+        mocked_bedrock_runtime: MagicMock,
     ):
         """Test query_endpoint with a general exception during processing."""
         mock_app.current_event.json_body = (

@@ -1,5 +1,3 @@
-"""Unit tests for the authorizer handler module."""
-
 # Standard Library
 from typing import Generator, Any, Dict
 from unittest.mock import MagicMock, patch

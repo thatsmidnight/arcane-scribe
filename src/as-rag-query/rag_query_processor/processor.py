@@ -1,6 +1,7 @@
 # Standard Library
 import os
 import time
+import json
 import shutil
 import hashlib
 from typing import Optional, Dict, Any
@@ -41,10 +42,18 @@ BEDROCK_EMBEDDING_MODEL_ID = os.environ.get(
 BEDROCK_TEXT_GENERATION_MODEL_ID = os.environ.get(
     "BEDROCK_TEXT_GENERATION_MODEL_ID", "amazon.titan-text-express-v1"
 )
+
+# Get the vector store bucket name and query cache table name from environment variables
 VECTOR_STORE_BUCKET_NAME = os.environ.get("VECTOR_STORE_BUCKET_NAME")
 QUERY_CACHE_TABLE_NAME = os.environ.get("QUERY_CACHE_TABLE_NAME")
+
+# Default SRD ID for the System Reference Document (SRD) and cache settings
 DEFAULT_SRD_ID = "dnd5e_srd"
 CACHE_TTL_SECONDS = 3600  # Cache responses for 1 hour, adjust as needed
+
+# Settings for the FAISS index cache
+faiss_index_cache: dict[str, FAISS] = {}
+MAX_CACHE_SIZE = 3
 
 # Initialize the embedding model
 try:
@@ -59,30 +68,71 @@ except Exception as e:
     logger.exception(f"Failed to initialize BedrockEmbeddings model: {e}")
     embedding_model = None
 
-# Initialize the ChatBedrock model for text generation
-try:
-    logger.info(
-        f"Initializing ChatBedrock model: {BEDROCK_TEXT_GENERATION_MODEL_ID}"
-    )
-    # Model kwargs can be used to control temperature, max_tokens_to_sample, etc.
-    # For Titan Text Express: "maxTokenCount", "temperature", "topP", "stopSequences"
-    # For Titan Text Lite: same as Express
-    llm = ChatBedrock(
-        client=bedrock_runtime_client,
-        model=BEDROCK_TEXT_GENERATION_MODEL_ID,
-        model_kwargs={
-            "temperature": 0.1,
-            "maxTokenCount": 1024,
-        },  # Slight creativity, control output length
-    )
-    logger.info("ChatBedrock model initialized.")
-except Exception as e:
-    logger.exception(f"Failed to initialize ChatBedrock model: {e}")
-    llm = None
 
-# FAISS index cache to avoid reloading from S3 frequently
-faiss_index_cache: dict[str, FAISS] = {}
-MAX_CACHE_SIZE = 3
+# Initialize default LLM instance
+_default_llm_instance = None
+
+
+def get_llm_instance(generation_config: Dict[str, Any]) -> Optional[ChatBedrock]:
+    """Creates or reuses a ChatBedrock instance with provided generation_config."""
+    global _default_llm_instance  # Can be used if no dynamic config provided
+
+    # Set default model kwargs for LLM
+    effective_model_kwargs = {
+        "temperature": 0.1,
+        "maxTokenCount": 1024,
+        "topP": None,  # Default to Bedrock's internal default if not set
+        "stopSequences": None  # Default to Bedrock's internal default if not set
+    }
+
+    # Validate and merge client-provided generation_config
+    if "temperature" in generation_config:
+        temp = generation_config["temperature"]
+        if isinstance(temp, (float, int)) and 0.0 <= temp <= 1.0:
+            effective_model_kwargs["temperature"] = float(temp)
+        else:
+            logger.warning(f"Invalid temperature value: {temp}. Using default.")
+
+    if "topP" in generation_config:
+        top_p_val = generation_config["topP"]
+        if isinstance(top_p_val, (float, int)) and 0.0 <= top_p_val <= 1.0:
+            effective_model_kwargs["topP"] = float(top_p_val)
+        else:
+            logger.warning(f"Invalid topP value: {top_p_val}. Using default.")
+
+    if "maxTokenCount" in generation_config:  # Note: Bedrock API uses "maxTokenCount"
+        max_tokens = generation_config["maxTokenCount"]
+        # Titan Text Express max is 8192, Lite is 4096
+        # Assuming BEDROCK_TEXT_GENERATION_MODEL_ID is Express or Lite
+        # Add more specific validation if needed based on the exact model.
+        if isinstance(max_tokens, int) and 0 <= max_tokens <= 8192:
+            effective_model_kwargs["maxTokenCount"] = max_tokens
+        else:
+            logger.warning(f"Invalid maxTokenCount: {max_tokens}. Using default or Bedrock's max.")
+            # Do not set maxTokenCount if invalid to let Bedrock use its internal default or max.
+            # Or, set to a known safe default like 1024 if you prefer explicit control.
+            if "maxTokenCount" in effective_model_kwargs and not (isinstance(max_tokens, int) and 0 <= max_tokens <= 8192):
+                del effective_model_kwargs["maxTokenCount"]  # remove if invalid, let model default
+
+    if "stopSequences" in generation_config:
+        stop_seqs = generation_config["stopSequences"]
+        if isinstance(stop_seqs, list) and all(isinstance(s, str) for s in stop_seqs):
+            effective_model_kwargs["stopSequences"] = stop_seqs
+        else:
+            logger.warning(f"Invalid stopSequences: {stop_seqs}. Ignoring client value.")
+
+    # Create ChatBedrock instance with effective model kwargs
+    try:
+        current_llm = ChatBedrock(
+            client=bedrock_runtime_client,
+            model=BEDROCK_TEXT_GENERATION_MODEL_ID,
+            model_kwargs=effective_model_kwargs
+        )
+        logger.info(f"ChatBedrock instance configured with: {effective_model_kwargs}")
+        return current_llm
+    except Exception as e_llm_init:
+        logger.exception(f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}")
+        return None
 
 
 def _load_faiss_index_from_s3(
@@ -175,6 +225,8 @@ def get_answer_from_rag(
     query_text: str,
     srd_id: str,
     invoke_generative_llm: bool,
+    use_conversational_style: bool,
+    generation_config_payload: Dict[str, Any],
     lambda_logger: Logger,
 ) -> Dict[str, Any]:
     """Process a query using RAG (Retrieval-Augmented Generation) with Bedrock.
@@ -190,6 +242,11 @@ def get_answer_from_rag(
         The SRD ID to use for the query.
     invoke_generative_llm : bool
         Whether to invoke the generative LLM for the query.
+    use_conversational_style : bool
+        Whether to use a conversational style for the LLM response.
+    generation_config_payload : Dict[str, Any]
+        Configuration payload for the LLM generation, including parameters
+        like temperature, max tokens, etc.
     lambda_logger : Logger
         The logger instance to use for logging.
 
@@ -200,11 +257,7 @@ def get_answer_from_rag(
         message.
     """
     # Ensure the clients and models are initialized
-    if (
-        not bedrock_runtime_client
-        or not embedding_model
-        or (invoke_generative_llm and not llm)
-    ):
+    if not bedrock_runtime_client or not embedding_model:
         lambda_logger.error(
             "RAG components (Bedrock clients, models) not initialized."
         )
@@ -277,6 +330,14 @@ def get_answer_from_rag(
         lambda_logger.exception(f"Error creating retriever: {e}")
         return {"error": "Failed to prepare for information retrieval."}
 
+    # Handle conversational style for the query text
+    final_query_text = query_text
+    if invoke_generative_llm and use_conversational_style:
+        final_query_text = f"User: {query_text}\nBot:"
+        lambda_logger.info(
+            "Using conversational style for query input to LLM."
+        )
+
     # If not invoking generative LLM, just return formatted retrieved chunks
     if not invoke_generative_llm:
         lambda_logger.info(
@@ -298,15 +359,15 @@ def get_answer_from_rag(
         formatted_answer = f"Based on the retrieved SRD content for your query '{query_text}':\n{context_str}"
         return {"answer": formatted_answer, "source": "retrieval_only"}
 
-    # Proceed with generative LLM if requested
-    if not llm:
-        # Should have been caught earlier, but defensive check
+    # Initialize LLM instance with dynamic config for this request
+    current_llm_instance = get_llm_instance(generation_config_payload)
+    if not current_llm_instance:
         lambda_logger.error(
-            "Generative LLM (ChatBedrock) is not available for a generative request."
+            "Failed to initialize ChatBedrock instance with dynamic config."
         )
         return {
             "error": (
-                "Internal server error: Generative LLM component not ready."
+                "Internal server error: Generative LLM component could not be configured."
             )
         }
 
@@ -314,10 +375,11 @@ def get_answer_from_rag(
     # This prompt template is crucial for guiding the LLM's response.
     prompt_template_str = """You are 'Arcane Scribe', a helpful TTRPG assistant.
 Based *only* on the following context from the System Reference Document (SRD), provide a concise and direct answer to the question.
-If the question asks for advice, optimization (e.g., "min-max"), or creative ideas, you may synthesize or infer suggestions *grounded in the provided SRD context*.
+If the question (which might be formatted as 'User: ... Bot:') asks for advice, optimization (e.g., "min-max"), or creative ideas, you may synthesize or infer suggestions *grounded in the provided SRD context*.
 Do not introduce rules, abilities, or concepts not present in or directly supported by the context.
 If the context does not provide enough information for a comprehensive answer or suggestion, state that clearly.
 Always be helpful and aim to directly address the user's intent.
+If the question is not formatted as 'User: ... Bot:', you may assume it is a direct question and respond accordingly.
 
 Context:
 {context}
@@ -336,7 +398,7 @@ Helpful Answer:"""
     #  2. Stuff them into the 'PROMPT'.
     #  3. Send that to the 'llm' (ChatBedrock).
     qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
+        llm=current_llm_instance,  # Use dynamically configured LLM
         chain_type="stuff",  # "stuff" is good for short contexts, ensure it fits model context window
         retriever=retriever,
         chain_type_kwargs={"prompt": PROMPT},
@@ -345,11 +407,12 @@ Helpful Answer:"""
 
     # Invoke the RAG chain with the query text
     lambda_logger.info(
-        f"Invoking RAG chain with Bedrock LLM for query: '{query_text}'"
+        f"Invoking RAG chain with Bedrock LLM for query: '{final_query_text}'"
     )
     try:
+        # The 'query' key for invoke should contain what the {question} placeholder in PROMPT expects
         result = qa_chain.invoke(
-            {"query": query_text}
+            {"query": final_query_text}
         )  # Langchain 0.2.x uses invoke
         answer = result.get("result", "No answer generated.")
         source_docs_content = [
@@ -377,6 +440,12 @@ Helpful Answer:"""
                         },
                         "timestamp": {"S": str(time.time())},
                         "ttl": {"N": str(ttl_value)},
+                        'generation_config_used': {
+                            'S': json.dumps(generation_config_payload)
+                        },
+                        'was_conversational': {
+                            'BOOL': use_conversational_style
+                        },
                     },
                 )
                 lambda_logger.info(

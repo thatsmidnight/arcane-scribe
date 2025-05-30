@@ -124,7 +124,7 @@ jobs:
 
       - name: Run tests
         if: matrix.check-type == 'test'
-        run: poetry run poe test-unit
+        run: poetry run nox
 
   cdk_synth:
     if: github.event_name == 'push'

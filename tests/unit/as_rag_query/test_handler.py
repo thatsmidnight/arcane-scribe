@@ -41,13 +41,16 @@ def mock_app(handler_module: MagicMock) -> Generator[MagicMock, None, None]:
 @pytest.fixture
 def mock_processor(
     handler_module: MagicMock,
+    mocked_s3,
+    mocked_dynamodb,
+    mocked_bedrock_runtime,
 ) -> Generator[MagicMock, None, None]:
     """Mock the processor module used by the handler."""
     with patch.object(handler_module, "processor") as mock_processor_instance:
         # Mock attributes checked by the handler
-        mock_processor_instance.s3_client = MagicMock()
-        mock_processor_instance.embedding_model = MagicMock()
-        mock_processor_instance.bedrock_runtime_client = MagicMock()
+        mock_processor_instance.s3_client = mocked_s3
+        mock_processor_instance.embedding_model = mocked_dynamodb
+        mock_processor_instance.bedrock_runtime_client = mocked_bedrock_runtime
         mock_processor_instance.DEFAULT_SRD_ID = "default_srd_id_value"
         # Mock the main function call
         mock_processor_instance.get_answer_from_rag.return_value = {
@@ -222,7 +225,6 @@ class TestRagQueryHandler:
         body_input: Any,
         expected_error_message: str,
         expected_status_code: int,
-        mocked_bedrock_runtime: MagicMock,
     ):
         """Test query_endpoint with various invalid input scenarios."""
         if isinstance(body_input, str) and body_input == "not_a_dict":
@@ -297,7 +299,6 @@ class TestRagQueryHandler:
         handler_module: MagicMock,
         mock_app: MagicMock,
         mock_logger: MagicMock,
-        mocked_bedrock_runtime: MagicMock,
     ):
         """Test query_endpoint with a general exception during processing."""
         mock_app.current_event.json_body = (

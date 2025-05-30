@@ -1,0 +1,31 @@
+{
+  "app": "python app.py",
+  "watch": {
+    "include": [
+      "app.py", "cdk/**"
+    ],
+    "exclude": [
+      "README.md",
+      "cdk*.json",
+      "requirements*.txt",
+      "source.bat",
+      "**/__init__.py",
+      "python/__pycache__",
+      "tests"
+    ]
+  },
+  "context": {
+    "@aws-cdk/aws-lambda:recognizeVersionProps": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
+    "@aws-cdk/aws-s3:createDefaultLoggingPolicy": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/core:stackRelativeExports": true,
+    "@aws-cdk/core:bootstrapQualifier": "arcaneqs",
+    "@aws-cdk/aws-lambda:recognizeLayerVersion": true,
+    "authorizer_header_name": "X-Local-Dev-Token",
+    "authorizer_secret_value": "b178d2e253be0ff36e28e9f6c35081baaa17901011c5a0ec4925ecc85c4a1a7f"
+  },
+  "build": null,
+  "output": "cdk.out",
+  "versionReporting": true
+}

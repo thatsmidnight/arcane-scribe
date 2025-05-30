@@ -4,8 +4,6 @@ from unittest.mock import patch, MagicMock, call
 
 # Third Party
 import pytest
-import boto3
-from moto import mock_aws
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 from langchain_community.vectorstores import FAISS
@@ -81,41 +79,29 @@ def mock_boto3_module_clients():
 
 
 @pytest.fixture
-def mock_s3(aws_credentials):
-    """Provides a mocked S3 service using moto."""
-    with mock_aws():
-        # Setup the bucket
-        s3 = boto3.client("s3", region_name="us-east-1")
-        s3.create_bucket(Bucket="test-vector-bucket")
-
-        # Replace processor's s3 client with our mocked one
-        with patch.object(processor, "s3_client", s3):
-            yield s3
+def setup_vector_bucket(mocked_s3):
+    """Setup the vector store bucket for processor tests."""
+    mocked_s3.create_bucket(Bucket="test-vector-bucket")
+    return mocked_s3
 
 
 @pytest.fixture
-def mock_dynamodb(aws_credentials):
-    """Provides a mocked DynamoDB service using moto."""
-    with mock_aws():
-        # Setup the table
-        dynamodb = boto3.client("dynamodb", region_name="us-east-1")
-        dynamodb.create_table(
-            TableName="test-query-cache-table",
-            KeySchema=[
-                {"AttributeName": "query_hash_srd_id", "KeyType": "HASH"}
-            ],
-            AttributeDefinitions=[
-                {"AttributeName": "query_hash_srd_id", "AttributeType": "S"}
-            ],
-            ProvisionedThroughput={
-                "ReadCapacityUnits": 1,
-                "WriteCapacityUnits": 1,
-            },
-        )
-
-        # Replace processor's dynamodb client with our mocked one
-        with patch.object(processor, "dynamodb_client", dynamodb):
-            yield dynamodb
+def setup_cache_table(mocked_dynamodb):
+    """Setup the query cache table for processor tests."""
+    mocked_dynamodb.create_table(
+        TableName="test-query-cache-table",
+        KeySchema=[
+            {"AttributeName": "query_hash_srd_id", "KeyType": "HASH"}
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": "query_hash_srd_id", "AttributeType": "S"}
+        ],
+        ProvisionedThroughput={
+            "ReadCapacityUnits": 1,
+            "WriteCapacityUnits": 1,
+        },
+    )
+    return mocked_dynamodb
 
 
 # --- Tests for get_llm_instance ---

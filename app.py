@@ -19,22 +19,21 @@ aws_env = cdk.Environment(
 
 # Determine stack suffix from context variable (passed by CI/CD or default to 'Dev')
 # This allows for unique stack names per feature branch
-stack_suffix = f"-{app.node.try_get_context('stack-suffix')}" or ""
+stack_suffix = app.node.try_get_context("stack-suffix")
+formatted_stack_suffix = f"-{stack_suffix}" if stack_suffix else ""
 stack_name_prefix = "arcane-scribe-stack"
 
 if stack_suffix:
-    final_stack_name = f"{stack_name_prefix}" + (
-        stack_suffix if stack_suffix else ""
-    )  # Constructs the final stack name with suffix
+    final_stack_name = f"{stack_name_prefix}{formatted_stack_suffix}"
 else:
     # Fallback for local development or main branch if no suffix is provided
     # Consider a more explicit way to differentiate main vs. feature if needed
-    stack_suffix = ""
+    formatted_stack_suffix = ""
     final_stack_name = stack_name_prefix
 
 # Create the stack with the final name and environment
 ArcaneScribeStack(
-    app, final_stack_name, stack_suffix=stack_suffix, env=aws_env
+    app, final_stack_name, stack_suffix=formatted_stack_suffix, env=aws_env
 )
 
 # Synthesize the app

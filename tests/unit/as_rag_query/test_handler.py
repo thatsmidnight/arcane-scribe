@@ -41,13 +41,16 @@ def mock_app(handler_module: MagicMock) -> Generator[MagicMock, None, None]:
 @pytest.fixture
 def mock_processor(
     handler_module: MagicMock,
+    mocked_s3,
+    mocked_dynamodb,
+    mocked_bedrock_runtime,
 ) -> Generator[MagicMock, None, None]:
     """Mock the processor module used by the handler."""
     with patch.object(handler_module, "processor") as mock_processor_instance:
         # Mock attributes checked by the handler
-        mock_processor_instance.s3_client = MagicMock()
-        mock_processor_instance.embedding_model = MagicMock()
-        mock_processor_instance.bedrock_runtime_client = MagicMock()
+        mock_processor_instance.s3_client = mocked_s3
+        mock_processor_instance.embedding_model = mocked_dynamodb
+        mock_processor_instance.bedrock_runtime_client = mocked_bedrock_runtime
         mock_processor_instance.DEFAULT_SRD_ID = "default_srd_id_value"
         # Mock the main function call
         mock_processor_instance.get_answer_from_rag.return_value = {

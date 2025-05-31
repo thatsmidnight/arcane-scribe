@@ -46,6 +46,20 @@ def mocked_dynamodb(aws_credentials):
 
 
 @pytest.fixture(scope="function")
+def mocked_bedrock_runtime(aws_credentials):
+    """
+    Mocked Bedrock Runtime service using moto for testing.
+    This fixture sets up a mocked Bedrock Runtime service that can be used in tests.
+    """
+    with mock_aws():
+        # Create a mocked Bedrock Runtime client
+        bedrock_runtime_client = boto3.client(
+            "bedrock-runtime", region_name="us-east-1"
+        )
+        yield bedrock_runtime_client
+
+
+@pytest.fixture(scope="function")
 def create_documents_bucket(mocked_s3):
     """
     Create a documents test bucket in the mocked S3 service.

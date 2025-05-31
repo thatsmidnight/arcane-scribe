@@ -22,7 +22,7 @@ aws_env = cdk.Environment(
 stack_suffix = f"-{app.node.try_get_context('stack-suffix')}" or ""
 stack_name_prefix = "arcane-scribe-stack"
 
-if stack_suffix != "main":
+if stack_suffix:
     final_stack_name = f"{stack_name_prefix}" + (
         stack_suffix if stack_suffix else ""
     )  # Constructs the final stack name with suffix

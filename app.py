@@ -6,7 +6,7 @@ import os
 import aws_cdk as cdk
 
 # Local Modules
-from cdk.stacks import ArcaneScribeStack
+from cdk.arcane_scribe_stack import ArcaneScribeStack
 
 # Initialize the CDK application
 app = cdk.App()

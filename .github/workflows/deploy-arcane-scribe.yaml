@@ -1,14 +1,40 @@
-name: Deploy Feature Branch to AWS
+name: Deploy Arcane Scribe
 
 on:
   push:
     branches:
       - 'feature/**'  # Trigger on pushes to branches starting with 'feature/'
       - 'main'  # Also allow manual trigger or push for main if needed for testing this workflow
+    paths:
+      - 'cdk/arcane_scribe_stack.py'
+      - 'cdk/custom_constructs/api_custom_domain.py'
+      - 'cdk/custom_constructs/dynamodb_table.py'
+      - 'cdk/custom_constructs/http_api.py'
+      - 'cdk/custom_constructs/http_lambda_authorizer.py'
+      - 'cdk/custom_constructs/iam_policy_statement.py'
+      - 'cdk/custom_constructs/lambda_function.py'
+      - 'cdk/custom_constructs/s3_bucket.py'
+      - 'src/as-authorizer/**'
+      - 'src/as-pdf-ingestor/**'
+      - 'src/as-presigned-url-generator/**'
+      - 'src/as-rag-query/**'
   pull_request:
     types: [closed]
     branches:
       - 'main'  # Trigger cleanup when PR is closed (merged or closed without merge)
+    paths:
+      - 'cdk/arcane_scribe_stack.py'
+      - 'cdk/custom_constructs/api_custom_domain.py'
+      - 'cdk/custom_constructs/dynamodb_table.py'
+      - 'cdk/custom_constructs/http_api.py'
+      - 'cdk/custom_constructs/http_lambda_authorizer.py'
+      - 'cdk/custom_constructs/iam_policy_statement.py'
+      - 'cdk/custom_constructs/lambda_function.py'
+      - 'cdk/custom_constructs/s3_bucket.py'
+      - 'src/as-authorizer/**'
+      - 'src/as-pdf-ingestor/**'
+      - 'src/as-presigned-url-generator/**'
+      - 'src/as-rag-query/**'
 
 permissions:
   id-token: write  # Required for OIDC if we switch to it

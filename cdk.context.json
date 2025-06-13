@@ -1,4 +1,6 @@
 {
   "authorizer_header_name": "X-Local-Dev-Token",
-  "authorizer_secret_value": "b178d2e253be0ff36e28e9f6c35081baaa17901011c5a0ec4925ecc85c4a1a7f"
+  "authorizer_secret_value": "b178d2e253be0ff36e28e9f6c35081baaa17901011c5a0ec4925ecc85c4a1a7f",
+  "bedrock_embedding_model_id": "amazon.titan-embed-text-v2:0",
+  "bedrock_text_generation_model_id": "amazon.titan-text-express-v1"
 }

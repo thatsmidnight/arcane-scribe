@@ -33,16 +33,6 @@ from cdk.custom_constructs.http_lambda_authorizer import (
 from cdk.custom_constructs.http_api import CustomHttpApiGateway
 from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
 
-# Define Bedrock model ARNs or use wildcards for simplicity in a dev environment.
-# For production, use specific model ARNs.
-# Example: arn:aws:bedrock:REGION::foundation-model/model-id
-# You can get these from the Bedrock console or documentation.
-# Common model IDs:
-# - Embeddings: amazon.titan-embed-text-v1 (or v2, check latest)
-# - Text Generation: amazon.titan-text-express-v1, amazon.titan-text-lite-v1
-BEDROCK_EMBEDDING_MODEL_ID = "amazon.titan-embed-text-v2:0"
-BEDROCK_TEXT_GENERATION_MODEL_ID = "amazon.titan-text-express-v1"
-
 
 class ArcaneScribeStack(Stack):
     def __init__(
@@ -71,6 +61,12 @@ class ArcaneScribeStack(Stack):
         self.subdomain_part = "arcane-scribe"
         self.full_domain_name = (
             f"{self.subdomain_part}{self.stack_suffix}.{self.base_domain_name}"
+        )
+        self.bedrock_embedding_model_id = self.node.try_get_context(
+            "bedrock_embedding_model_id"
+        )
+        self.bedrock_text_generation_model_id = self.node.try_get_context(
+            "bedrock_text_generation_model_id"
         )
         # endregion
 
@@ -130,8 +126,8 @@ class ArcaneScribeStack(Stack):
             construct_id="BedrockInvokePolicy",
             actions=["bedrock:InvokeModel"],
             resources=[
-                f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_EMBEDDING_MODEL_ID}",
-                f"arn:aws:bedrock:{self.region}::foundation-model/{BEDROCK_TEXT_GENERATION_MODEL_ID}",
+                f"arn:aws:bedrock:{self.region}::foundation-model/{self.bedrock_embedding_model_id}",
+                f"arn:aws:bedrock:{self.region}::foundation-model/{self.bedrock_text_generation_model_id}",
             ],
         )
         # endregion
@@ -161,7 +157,7 @@ class ArcaneScribeStack(Stack):
                     self.vector_store_bucket.bucket_name
                 ),
                 "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name,
-                "BEDROCK_EMBEDDING_MODEL_ID": BEDROCK_EMBEDDING_MODEL_ID,
+                "BEDROCK_EMBEDDING_MODEL_ID": self.bedrock_embedding_model_id,
             },
             memory_size=1024,  # More memory for processing PDFs
             timeout=Duration.minutes(5),  # May take longer for large PDFs
@@ -189,10 +185,10 @@ class ArcaneScribeStack(Stack):
                     self.vector_store_bucket.bucket_name
                 ),
                 "BEDROCK_TEXT_GENERATION_MODEL_ID": (
-                    BEDROCK_TEXT_GENERATION_MODEL_ID
+                    self.bedrock_text_generation_model_id
                 ),
                 "BEDROCK_EMBEDDING_MODEL_ID": (
-                    BEDROCK_EMBEDDING_MODEL_ID
+                    self.bedrock_embedding_model_id
                 ),  # For query embedding
                 "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
             },

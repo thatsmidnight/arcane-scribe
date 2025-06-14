@@ -5,7 +5,7 @@ and ensure it matches a whitelisted IP address stored in AWS Systems Manager
 (SSM).
 """
 
-# Third Party
+# Local Modules
 from api_backend.dependencies.dependencies import verify_source_ip
 
 __all__ = [

@@ -6,7 +6,7 @@ easy access to these services without needing to import them individually in
 other parts of the codebase.
 """
 
-# Third Party
+# Local Modules
 from api_backend.aws.s3 import S3Client
 from api_backend.aws.ssm import SsmClient
 from api_backend.aws.dynamodb import DynamoDb

@@ -5,7 +5,7 @@ It imports the main API router and configuration settings, and exposes them
 for use in the application.
 """
 
-# Third Party
+# Local Modules
 from api_backend.api import router
 from api_backend.config import (
     API_PREFIX,

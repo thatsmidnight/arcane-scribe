@@ -13,6 +13,8 @@ from langchain_aws import ChatBedrock
 from langchain_community.vectorstores import FAISS
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.prompts import PromptTemplate
+
+# Local Modules
 from api_backend import (
     BEDROCK_EMBEDDING_MODEL_ID,
     BEDROCK_TEXT_GENERATION_MODEL_ID,

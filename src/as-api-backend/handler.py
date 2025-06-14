@@ -10,6 +10,8 @@ from fastapi.openapi.utils import get_openapi
 from aws_lambda_powertools import Logger
 from aws_lambda_powertools.logging import correlation_paths
 from aws_lambda_powertools.utilities.typing import LambdaContext
+
+# Local Modules
 from api_backend import router, API_PREFIX
 from api_backend.dependencies import verify_source_ip
 

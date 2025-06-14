@@ -4,7 +4,7 @@ It imports and exposes the necessary Pydantic models for handling
 Retrieval-Augmented Generation (RAG) queries and presigned URL requests.
 """
 
-# Third Party
+# Local Modules
 from api_backend.models.srd import (
     PresignedUrlRequest,
     PresignedUrlResponse,

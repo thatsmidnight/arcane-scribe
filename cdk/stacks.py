@@ -79,6 +79,36 @@ class ArcaneScribeStack(Stack):
         )
         # endregion
 
+        # region Cognito User Pool for Authentication
+        # Create a Cognito User Pool for authentication
+        user_pool = self.create_cognito_user_pool(
+            construct_id="ArcaneScribeUserPool", name="arcane-scribe-user-pool"
+        )
+
+        # Create user pool client for authorizer Lambda
+        user_pool_client = user_pool.add_client(
+            id="ArcaneScribeUserPoolClient", name="arcane-scribe-client"
+        )
+
+        # Output user pool ID and client ID
+        CfnOutput(
+            self,
+            "UserPoolIdOutput",
+            value=user_pool.user_pool.user_pool_id,
+            description="Cognito User Pool ID for Arcane Scribe",
+            export_name=f"arcane-scribe-user-pool-id{self.stack_suffix}",
+        )
+        CfnOutput(
+            self,
+            "UserPoolClientIdOutput",
+            value=user_pool_client.user_pool_client_id,
+            description="Cognito User Pool Client ID for Arcane Scribe",
+            export_name=(
+                f"arcane-scribe-user-pool-client-id{self.stack_suffix}"
+            ),
+        )
+        # endregion
+
         # region S3 Buckets
         # Bucket for storing uploaded PDF documents
         self.documents_bucket = self.create_s3_bucket(

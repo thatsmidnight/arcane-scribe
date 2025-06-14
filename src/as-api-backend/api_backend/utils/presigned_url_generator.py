@@ -1,17 +1,12 @@
-# Standard Library
-import os
-
 # Third Party
 from aws_lambda_powertools import Logger
 
 # Local Modules
+from api_backend import DOCUMENTS_BUCKET_NAME
 from api_backend.aws import S3Client
 
 # Initialize logger
 logger = Logger(service="presigned-url-generator-processor")
-
-# Retrieve environment variables
-DOCUMENTS_BUCKET_NAME = os.environ["DOCUMENTS_BUCKET_NAME"]
 
 
 def generate_presigned_url(

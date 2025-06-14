@@ -15,20 +15,16 @@ from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.prompts import PromptTemplate
 
 # Local Modules
+from api_backend import (
+    BEDROCK_EMBEDDING_MODEL_ID,
+    BEDROCK_TEXT_GENERATION_MODEL_ID,
+    VECTOR_STORE_BUCKET_NAME,
+    QUERY_CACHE_TABLE_NAME,
+)
 from api_backend.aws import S3Client, DynamoDb, BedrockRuntimeClient
 
 # Initialize logger
 logger = Logger(service="rag-query-processor-bedrock")
-
-# Get the Bedrock model IDs from environment
-BEDROCK_EMBEDDING_MODEL_ID = os.environ["BEDROCK_EMBEDDING_MODEL_ID"]
-BEDROCK_TEXT_GENERATION_MODEL_ID = os.environ[
-    "BEDROCK_TEXT_GENERATION_MODEL_ID"
-]
-
-# Get the vector store bucket name and query cache table name from environment variables
-VECTOR_STORE_BUCKET_NAME = os.environ["VECTOR_STORE_BUCKET_NAME"]
-QUERY_CACHE_TABLE_NAME = os.environ["QUERY_CACHE_TABLE_NAME"]
 
 # Default SRD ID for the System Reference Document (SRD) and cache settings
 DEFAULT_SRD_ID = "dnd5e_srd"

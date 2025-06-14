@@ -107,11 +107,14 @@ def lambda_handler(event, context):
 
     except Exception as e:
         print(f"Error: {str(e)}")
+        # Truncate the error message to fit within the 4KB limit
+        error_message = f"Error: {str(e)}"
+        truncated_message = error_message[:1024] # Truncate to a safe length
         cfnresponse.send(
             event,
             context,
             cfnresponse.FAILED,
-            {"Error": str(e)},
+            {"Error": truncated_message},
             physical_resource_id,
         )
 

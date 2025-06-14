@@ -141,6 +141,33 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region Lambda Functions
+        # Create backend Lambda role
+        backend_lambda_role = self.create_iam_role(
+            construct_id="BackendLambdaRole",
+            name="arcane-scribe-backend-role",
+        ).role
+
+        # Grant permission to get the home IP SSM parameter
+        backend_lambda_role.add_to_policy(
+            self.create_iam_policy_statement(
+                construct_id="BackendLambdaSsmPolicy",
+                actions=["ssm:GetParameter"],
+                resources=[
+                    Fn.join(
+                        ":",
+                        [
+                            "arn",
+                            "aws",
+                            "ssm",
+                            self.region,
+                            self.account,
+                            f"parameter{imported_home_ip_ssm_param_name}",
+                        ]
+                    )
+                ],
+            ).statement
+        )
+
         # Lambda for generating pre-signed URLs for document uploads
         self.presigned_url_lambda = self.create_lambda_function(
             construct_id="PresignedUrlLambda",

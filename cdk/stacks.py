@@ -13,20 +13,15 @@ from aws_cdk import (
     aws_route53 as route53,
     aws_dynamodb as dynamodb,
     aws_apigateway as apigw,
-    aws_apigatewayv2 as apigwv2,
     aws_route53_targets as targets,
     aws_s3_notifications as s3n,
     aws_certificatemanager as acm,
-    aws_apigatewayv2_authorizers as apigwv2_authorizers,
 )
 from constructs import Construct
 
 # Local Modules
 from cdk.custom_constructs import (
-    ApiCustomDomain,
     CustomDynamoDBTable,
-    CustomHttpApiGateway,
-    CustomHttpLambdaAuthorizer,
     CustomIAMPolicyStatement,
     CustomIamRole,
     CustomLambdaFromDockerImage,

@@ -235,7 +235,7 @@ class ArcaneScribeStack(Stack):
                 apigwv2.CorsHttpMethod.POST,
                 apigwv2.CorsHttpMethod.GET,
                 apigwv2.CorsHttpMethod.OPTIONS,
-            ]
+            ],
             allow_headers=[
                 "X-Amz-Date",
                 "X-Api-Key",

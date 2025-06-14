@@ -35,7 +35,7 @@ faiss_index_cache: dict[str, FAISS] = {}
 MAX_CACHE_SIZE = 3
 
 # Initialize default LLM instance
-_default_llm_instance = None
+_default_llm_instance: Optional[ChatBedrock] = None
 
 
 def get_llm_instance(

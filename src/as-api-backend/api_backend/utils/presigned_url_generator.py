@@ -2,33 +2,21 @@
 import os
 
 # Third Party
-import boto3
-from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 
-# Initialize logger
-logger = Logger(service="presigned_url_generator_processor")
+# Local Modules
+from api_backend.aws import S3Client
 
-# Initialize Boto3 S3 client globally
-try:
-    s3_client = boto3.client("s3")
-except Exception as e:
-    logger.exception(f"Failed to initialize Boto3 S3 client globally: {e}")
-    raise e
+# Initialize logger
+logger = Logger(service="presigned-url-generator-processor")
 
 # Retrieve environment variables
-DOCUMENTS_BUCKET_NAME = os.environ.get("DOCUMENTS_BUCKET_NAME")
-if not DOCUMENTS_BUCKET_NAME:
-    logger.error("DOCUMENTS_BUCKET_NAME environment variable is not set.")
-    raise Exception(
-        "Environment variable DOCUMENTS_BUCKET_NAME must be set for S3 operations."
-    )
+DOCUMENTS_BUCKET_NAME = os.environ["DOCUMENTS_BUCKET_NAME"]
 
 
 def generate_presigned_url(
     file_name: str,
     srd_id: str,
-    content_type: str = "application/pdf",
     expiration: int = 3600,
 ) -> str:
     """
@@ -40,8 +28,6 @@ def generate_presigned_url(
         The name of the file to be uploaded.
     srd_id : str
         The client-specified SRD identifier.
-    content_type : str, optional
-        The content type of the file, defaults to "application/pdf".
     expiration : int, optional
         The number of seconds the presigned URL is valid for, defaults to
         3600 seconds (1 hour).
@@ -59,18 +45,24 @@ def generate_presigned_url(
     # Construct object key using SRD ID as prefix
     object_key = f"{srd_id}/{file_name}"
 
+    # Initialize S3 client
+    s3_client = S3Client(bucket_name=DOCUMENTS_BUCKET_NAME)
+
     # Generate presigned URL with content type
     try:
-        presigned_url = s3_client.generate_presigned_url(
-            "put_object",
-            Params={
-                "Bucket": DOCUMENTS_BUCKET_NAME,
-                "Key": object_key,
-                "ContentType": content_type,
-            },
-            ExpiresIn=expiration,
+        presigned_url = s3_client.generate_presigned_upload_url(
+            object_key=object_key,
+            expiration=expiration,
         )
-        return presigned_url
-    except ClientError as e:
+
+        if not presigned_url:
+            raise ValueError("Failed to generate presigned URL.")
+    except Exception as e:
         logger.error(f"Failed to generate presigned URL: {e}")
         raise e
+    else:
+        logger.info(
+            f"Presigned URL generated successfully for {object_key} with "
+            f"expiration {expiration} seconds."
+        )
+        return presigned_url

@@ -1,5 +1,5 @@
 # Standard Library
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 # Third Party
 from aws_cdk import (

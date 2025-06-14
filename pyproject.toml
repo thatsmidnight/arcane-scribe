@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "arcane-scribe"
-version = "0.1.0"
+version = "0.2.0"
 description = "A TTRPG Rulebook RAG System"
 authors = ["thatsmidnight <10793854+thatsmidnight@users.noreply.github.com>"]
 license = "CC0-1.0"

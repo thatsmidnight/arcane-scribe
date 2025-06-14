@@ -10,7 +10,12 @@ from api_backend.models.srd import (
     PresignedUrlResponse,
     PresignedUrlErrorResponse,
 )
-from api_backend.models.query import RagQueryRequest, GenerationConfig
+from api_backend.models.query import (
+    RagQueryRequest,
+    GenerationConfig,
+    RagQueryResponse,
+    RagQueryErrorResponse,
+)
 
 __all__ = [
     "PresignedUrlRequest",
@@ -18,4 +23,6 @@ __all__ = [
     "PresignedUrlErrorResponse",
     "RagQueryRequest",
     "GenerationConfig",
+    "RagQueryResponse",
+    "RagQueryErrorResponse",
 ]

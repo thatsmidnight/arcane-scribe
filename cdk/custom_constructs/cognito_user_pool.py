@@ -22,7 +22,9 @@ class CustomCognitoUserPool(Construct):
         ] = cognito.AutoVerifiedAttrs(email=True),
         standard_attributes: Optional[
             Union[cognito.StandardAttributes, Dict[str, Any]]
-        ] = None,
+        ] = cognito.StandardAttributes(
+            email=cognito.StandardAttribute(required=True, mutable=True)
+        ),
         password_policy: Optional[
             Union[cognito.PasswordPolicy, Dict[str, Any]]
         ] = cognito.PasswordPolicy(

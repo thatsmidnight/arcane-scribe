@@ -71,6 +71,13 @@ class ArcaneScribeStack(Stack):
         )
         # endregion
 
+        # region Import CloudFormation Outputs
+        # Import home IP SSM Parameter Name
+        imported_home_ip_ssm_param_name = Fn.import_value(
+            "home-ip-ssm-param-name"
+        )
+        # endregion
+
         # region Authorization Header and Secret
         # Retrieve context variables passed from CDK CLI
         auth_header_name_from_context = self.node.try_get_context(

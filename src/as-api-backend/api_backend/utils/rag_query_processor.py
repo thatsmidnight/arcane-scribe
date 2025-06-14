@@ -31,7 +31,7 @@ DEFAULT_SRD_ID = "dnd5e_srd"
 CACHE_TTL_SECONDS = 3600  # Cache responses for 1 hour, adjust as needed
 
 # Settings for the FAISS index cache
-faiss_index_cache: dict[str, FAISS] = {}
+FAISS_INDEX_CACHE: dict[str, FAISS] = {}
 MAX_CACHE_SIZE = 3
 
 # Initialize default LLM instance
@@ -170,9 +170,9 @@ def _load_faiss_index_from_s3(
     s3_client = S3Client(bucket_name=VECTOR_STORE_BUCKET_NAME)
 
     # Check if the FAISS index is already in cache
-    if srd_id in faiss_index_cache:
+    if srd_id in FAISS_INDEX_CACHE:
         lambda_logger.info(f"FAISS index for '{srd_id}' found in cache.")
-        return faiss_index_cache[srd_id]
+        return FAISS_INDEX_CACHE[srd_id]
 
     # Construct the S3 key for the FAISS index
     s3_index_prefix = f"{srd_id}/faiss_index"
@@ -213,10 +213,10 @@ def _load_faiss_index_from_s3(
         )
 
         # Check if the vector store was loaded successfully
-        if len(faiss_index_cache) >= MAX_CACHE_SIZE:
-            oldest_key = next(iter(faiss_index_cache))
-            faiss_index_cache.pop(oldest_key)
-        faiss_index_cache[srd_id] = vector_store
+        if len(FAISS_INDEX_CACHE) >= MAX_CACHE_SIZE:
+            oldest_key = next(iter(FAISS_INDEX_CACHE))
+            FAISS_INDEX_CACHE.pop(oldest_key)
+        FAISS_INDEX_CACHE[srd_id] = vector_store
         return vector_store
     except Exception as e:
         lambda_logger.exception(

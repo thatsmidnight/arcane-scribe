@@ -409,6 +409,46 @@ class ArcaneScribeStack(Stack):
         )
         return custom_dynamodb_table.table
 
+    def create_iam_role(
+        self,
+        construct_id: str,
+        name: str,
+        assumed_by: Optional[str] = "lambda.amazonaws.com",
+        managed_policies: Optional[List[iam.IManagedPolicy]] = None,
+        inline_policies: Optional[List[iam.Policy]] = None,
+    ) -> CustomIamRole:
+        """Helper method to create an IAM Role.
+
+        Parameters
+        ----------
+        construct_id : str
+            The ID of the construct.
+        name : str
+            The name of the IAM Role.
+        assumed_by : Optional[str], optional
+            The principal that can assume this role, by default
+            "lambda.amazonaws.com"
+        managed_policies : Optional[List[iam.IManagedPolicy]], optional
+            List of managed policies to attach to the role, by default None
+        inline_policies : Optional[List[iam.Policy]], optional
+            List of inline policies to attach to the role, by default None
+
+        Returns
+        -------
+        CustomIamRole
+            The created IAM Role instance.
+        """
+        custom_iam_role = CustomIamRole(
+            scope=self,
+            id=construct_id,
+            name=name,
+            stack_suffix=self.stack_suffix,
+            assumed_by=assumed_by,
+            managed_policies=managed_policies,
+            inline_policies=inline_policies,
+        )
+        return custom_iam_role
+
     def create_iam_policy_statement(
         self,
         construct_id: str,

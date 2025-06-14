@@ -5,8 +5,6 @@ from typing import List, Optional
 
 # Third Party
 from pydantic import BaseModel, Field, ConfigDict
-
-# Local Modules
 from api_backend.utils import ResponseSource
 
 

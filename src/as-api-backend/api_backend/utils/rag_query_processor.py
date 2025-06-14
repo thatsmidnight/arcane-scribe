@@ -13,8 +13,6 @@ from langchain_aws import ChatBedrock
 from langchain_community.vectorstores import FAISS
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.prompts import PromptTemplate
-
-# Local Modules
 from api_backend import (
     BEDROCK_EMBEDDING_MODEL_ID,
     BEDROCK_TEXT_GENERATION_MODEL_ID,
@@ -301,8 +299,8 @@ def get_answer_from_rag(
 
             # Check if the item exists and is still valid (TTL)
             if (
-                response and
-                "Item" in response
+                response
+                and "Item" in response
                 and int(response["Item"].get("ttl", {"N": "0"})["N"])
                 > time.time()
             ):

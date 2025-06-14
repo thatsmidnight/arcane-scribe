@@ -13,6 +13,7 @@ class AllowedMethod(str, Enum):
         patch: HTTP PATCH method.
         head: HTTP HEAD method.
     """
+
     get = "GET"
     post = "POST"
     put = "PUT"

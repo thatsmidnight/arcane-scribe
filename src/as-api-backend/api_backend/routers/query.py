@@ -5,8 +5,6 @@ from typing import Union
 from aws_lambda_powertools import Logger
 from fastapi import APIRouter, Body, status
 from fastapi.responses import JSONResponse
-
-# Local Modules
 from api_backend.utils import get_answer_from_rag
 from api_backend.models import (
     RagQueryRequest,

@@ -1,57 +1,17 @@
 # Standard Library
-import os
-from typing import Dict, Any, Optional
+from typing import Optional
 
 # Third Party
-import boto3
-from botocore.exceptions import ClientError
 from fastapi import Request, HTTPException, status
+from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 
+# Local Modules
+from api_backend import HOME_IP_SSM_PARAMETER_NAME
+from api_backend.aws import SsmClient
+
 # Initialize logger
-logger = Logger(service="ip-whitelist-dependency")
-
-# Set up in-memory cache for SSM parameter
-_ssm_cache: Dict[str, Any] = {"ip_address": None, "last_fetch_time": 0}
-
-# Refresh IP from SSM at most once every 60 seconds
-CACHE_TTL_SECONDS = 60
-
-# Get the SSM client from the environment variable
-HOME_IP_SSM_PARAMETER_NAME = os.environ.get("HOME_IP_SSM_PARAMETER_NAME")
-
-# Initialize the SSM client as a global variable
-ssm_client: Optional[boto3.client] = None
-
-
-def get_ssm_client() -> boto3.client:
-    """Initializes and returns a Boto3 SSM client.
-
-    This function uses a singleton pattern to ensure that the SSM client is
-    created only once and reused across calls. It also handles exceptions
-    during client initialization, logging the error and re-raising it.
-
-    Returns
-    -------
-    boto3.client
-        A Boto3 SSM client instance.
-
-    Raises
-    ------
-    Exception
-        If the SSM client cannot be initialized, an exception is raised.
-    """
-    # Use a global variable to store the SSM client
-    global ssm_client
-
-    # Check if the SSM client is already initialized
-    if ssm_client is None:
-        try:
-            ssm_client = boto3.client("ssm")
-        except Exception as e:
-            logger.exception(f"Failed to initialize Boto3 SSM client: {e}")
-            raise e
-    return ssm_client
+logger = Logger(service="dependencies")
 
 
 def get_allowed_ip_from_ssm() -> Optional[str]:
@@ -64,14 +24,13 @@ def get_allowed_ip_from_ssm() -> Optional[str]:
     """
     try:
         # Get the SSM client
-        ssm_client = get_ssm_client()
+        ssm_client = SsmClient()
 
         # Get the SSM parameter value from the environment variable
-        parameter = ssm_client.get_parameter(Name=HOME_IP_SSM_PARAMETER_NAME)
-        ip_address = parameter.get("Parameter", {}).get("Value")
+        ip_address = ssm_client.get_parameter(name=HOME_IP_SSM_PARAMETER_NAME)
 
         # Return the IP address if it exists
-        if ip_address:
+        if ip_address and isinstance(ip_address, str):
             return ip_address
         else:
             # If the parameter value is empty, log an error and return None

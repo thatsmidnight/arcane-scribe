@@ -26,8 +26,7 @@ from api_backend.aws import S3Client, DynamoDb, BedrockRuntimeClient
 # Initialize logger
 logger = Logger(service="rag-query-processor")
 
-# Default SRD ID for the System Reference Document (SRD) and cache settings
-DEFAULT_SRD_ID = "dnd5e_srd"
+# Default cache settings
 CACHE_TTL_SECONDS = 3600  # Cache responses for 1 hour, adjust as needed
 
 # Settings for the FAISS index cache

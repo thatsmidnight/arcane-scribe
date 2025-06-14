@@ -2,7 +2,7 @@
 from typing import Optional
 
 # Third Party
-from pydantic import BaseModel, Field, ConfigDict, HttpUrl
+from pydantic import BaseModel, Field, ConfigDict, HttpUrl, FilePath
 
 # Local Modules
 from api_backend.utils import AllowedMethod
@@ -19,7 +19,7 @@ class PresignedUrlRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    file_name: str = Field(
+    file_name: FilePath = Field(
         ..., description="The name of the file to upload.",
     )
     srd_id: str = Field(

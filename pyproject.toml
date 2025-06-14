@@ -7,6 +7,8 @@ license = "CC0-1.0"
 readme = "README.md"
 package-mode = true
 packages = [
+    { include = "api_backend", from = "src/as-api-backend" },
+    { include = "api_authorizer", from = "src/as-authorizer" },
     { include = "pdf_ingestor", from = "src/as-pdf-ingestor" },
 ]
 

@@ -16,18 +16,24 @@ class CustomCognitoUserPool(Construct):
         self_sign_up_enabled: Optional[bool] = False,
         sign_in_aliases: Optional[
             Union[cognito.SignInAliases, Dict[str, Any]]
-        ] = None,
+        ] = cognito.SignInAliases(email=True, username=True),
         auto_verify: Optional[
             Union[cognito.AutoVerifiedAttrs, Dict[str, Any]]
-        ] = None,
+        ] = cognito.AutoVerifiedAttrs(email=True),
         standard_attributes: Optional[
             Union[cognito.StandardAttributes, Dict[str, Any]]
         ] = None,
         password_policy: Optional[
             Union[cognito.PasswordPolicy, Dict[str, Any]]
-        ] = None,
+        ] = cognito.PasswordPolicy(
+            min_length=8,
+            require_lowercase=True,
+            require_uppercase=True,
+            require_digits=True,
+            require_symbols=True,
+        ),
         account_recovery: Optional[cognito.AccountRecovery] = None,
-        removal_policy: Optional[RemovalPolicy] = None,
+        removal_policy: Optional[RemovalPolicy] = RemovalPolicy.DESTROY,
     ) -> None:
         super().__init__(scope, id)
 
@@ -48,7 +54,7 @@ class CustomCognitoUserPool(Construct):
             account_recovery=(
                 account_recovery or cognito.AccountRecovery.EMAIL_ONLY
             ),
-            removal_policy=removal_policy or RemovalPolicy.DESTROY,
+            removal_policy=removal_policy,
         )
 
     def add_client(

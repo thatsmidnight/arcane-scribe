@@ -30,7 +30,7 @@ class CognitoStack(NestedStack):
         # 1. Create the Cognito User Pool
         self.user_pool = self.create_cognito_user_pool(
             construct_id=f"DefaultUserPool{self.stack_suffix}",
-            name=f"{name}{self.stack_suffix}",
+            name=name,
         ).user_pool
 
         # 2. Create a User Pool Client for the application

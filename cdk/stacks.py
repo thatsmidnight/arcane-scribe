@@ -250,7 +250,9 @@ class ArcaneScribeStack(Stack):
         # region Custom Domain Setup for API Gateway
         # 1. Look up existing hosted zone for "thatsmidnight.com"
         hosted_zone = route53.HostedZone.from_lookup(
-            self, "ArcaneScribeHostedZone", domain_name=self.base_domain_name
+            self,
+            "ArcaneScribeHostedZone",
+            domain_name=self.base_domain_name,
         )
 
         # 2. Create an ACM certificate for subdomain with DNS validation
@@ -261,27 +263,29 @@ class ArcaneScribeStack(Stack):
             validation=acm.CertificateValidation.from_dns(hosted_zone),
         )
 
-        # 3. Create the API Gateway Custom Domain Name resource
-        apigw_custom_domain = apigwv2.DomainName(
+        # 3. Create the API Gateway Custom Domain Name resource (REST API v1)
+        apigw_custom_domain = apigw.DomainName(
             self,
             "ApiCustomDomain",
             domain_name=self.full_domain_name,
             certificate=api_certificate,
+            endpoint_type=apigw.EndpointType.REGIONAL,
         )
 
-        # 4. Map HTTP API to this custom domain
-        default_stage = self.http_api.http_api.default_stage
+        # 4. Map REST API to this custom domain
+        default_stage = self.rest_api.deployment_stage
         if not default_stage:
             raise ValueError(
                 "Default stage could not be found for API mapping. Ensure API has a default stage or specify one."
             )
 
-        _ = apigwv2.ApiMapping(
+        # Create base path mapping for REST API
+        apigw.BasePathMapping(
             self,
-            "ApiMapping",
-            api=self.http_api.http_api,
+            "ApiBasePathMapping",
             domain_name=apigw_custom_domain,
-            stage=default_stage,  # Use the actual default stage object
+            rest_api=self.rest_api,
+            stage=default_stage,
         )
 
         # 5. Create the Route 53 Alias Record pointing to the API Gateway custom domain
@@ -289,12 +293,9 @@ class ArcaneScribeStack(Stack):
             self,
             "ApiAliasRecord",
             zone=hosted_zone,
-            record_name=f"{self.subdomain_part}{self.stack_suffix}",  # e.g., "arcane-scribe" or "arcane-scribe-dev"
+            record_name=f"{self.subdomain_part}{self.stack_suffix}",
             target=route53.RecordTarget.from_alias(
-                targets.ApiGatewayv2DomainProperties(
-                    regional_domain_name=apigw_custom_domain.regional_domain_name,
-                    regional_hosted_zone_id=apigw_custom_domain.regional_hosted_zone_id,
-                )
+                targets.ApiGatewayDomain(apigw_custom_domain)
             ),
         )
 

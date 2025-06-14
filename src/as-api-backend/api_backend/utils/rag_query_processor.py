@@ -35,7 +35,7 @@ FAISS_INDEX_CACHE: dict[str, FAISS] = {}
 MAX_CACHE_SIZE = 3
 
 # Initialize default LLM instance
-_default_llm_instance: Optional[ChatBedrock] = None
+DEFAULT_LLM_INSTANCE: Optional[ChatBedrock] = None
 
 
 def get_llm_instance(
@@ -63,7 +63,7 @@ def get_llm_instance(
         or None if the configuration is invalid or if no default instance is
         set.
     """
-    global _default_llm_instance  # Can be used if no dynamic config provided
+    global DEFAULT_LLM_INSTANCE  # Can be used if no dynamic config provided
 
     # Initialize the Bedrock runtime client
     bedrock_runtime_client = BedrockRuntimeClient()
@@ -136,14 +136,14 @@ def get_llm_instance(
         logger.exception(
             f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}"
         )
-        _default_llm_instance = bedrock_runtime_client.get_chat_model(
+        DEFAULT_LLM_INSTANCE = bedrock_runtime_client.get_chat_model(
             model_id=BEDROCK_TEXT_GENERATION_MODEL_ID,
             model_kwargs={
                 "temperature": 0.1,
                 "maxTokenCount": 1024,
             },
         )
-        return _default_llm_instance  # Return default instance if dynamic config fails
+        return DEFAULT_LLM_INSTANCE  # Return default instance if dynamic config fails
 
 
 def _load_faiss_index_from_s3(

@@ -9,7 +9,7 @@ for use in the application.
 from api_backend.api import router
 from api_backend.config import (
     API_PREFIX,
-    DOCUMENTS_BUCKET,
+    DOCUMENTS_BUCKET_NAME,
     VECTOR_STORE_BUCKET_NAME,
     QUERY_CACHE_TABLE_NAME,
     BEDROCK_EMBEDDING_MODEL_ID,
@@ -19,7 +19,7 @@ from api_backend.config import (
 __all__ = [
     "router",
     "API_PREFIX",
-    "DOCUMENTS_BUCKET",
+    "DOCUMENTS_BUCKET_NAME",
     "VECTOR_STORE_BUCKET_NAME",
     "QUERY_CACHE_TABLE_NAME",
     "BEDROCK_EMBEDDING_MODEL_ID",

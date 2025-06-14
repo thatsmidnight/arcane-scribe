@@ -238,7 +238,7 @@ def get_answer_from_rag(
     invoke_generative_llm: bool,
     use_conversational_style: bool,
     generation_config_payload: Dict[str, Any],
-    lambda_logger: Logger,
+    lambda_logger: Optional[Logger] = None,
 ) -> Dict[str, Any]:
     """Process a query using RAG (Retrieval-Augmented Generation) with Bedrock.
     This function retrieves relevant documents from a FAISS index and
@@ -258,8 +258,9 @@ def get_answer_from_rag(
     generation_config_payload : Dict[str, Any]
         Configuration payload for the LLM generation, including parameters
         like temperature, max tokens, etc.
-    lambda_logger : Logger
-        The logger instance to use for logging.
+    lambda_logger : Optional[Logger]
+        The logger instance to use for logging. If None, a default logger
+        will be used.
 
     Returns
     -------
@@ -269,6 +270,10 @@ def get_answer_from_rag(
     """
     # Initialize the DynamoDB client
     dynamodb_client = DynamoDb(table_name=QUERY_CACHE_TABLE_NAME)
+
+    # Use the provided logger or create a new one if not provided
+    if lambda_logger is None:
+        lambda_logger = logger
 
     # Cache table is only relevant if LLM is invoked
     if invoke_generative_llm:

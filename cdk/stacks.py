@@ -227,29 +227,24 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region API Gateway
-        # Create an HTTP API Gateway
-        self.http_api = self.create_http_api_gateway(
+        # Create a custom REST API Gateway
+        self.rest_api = self.create_rest_api_gateway(
             construct_id="ArcaneScribeHttpApi",
-            api_name="arcane-scribe-http-api",
-            allow_origins=["*"],
+            name="arcane-scribe-rest-api",
             allow_methods=[
                 apigwv2.CorsHttpMethod.POST,
                 apigwv2.CorsHttpMethod.GET,
                 apigwv2.CorsHttpMethod.OPTIONS,
-            ],
+            ]
             allow_headers=[
-                "Content-Type",
-                "Authorization",
                 "X-Amz-Date",
                 "X-Api-Key",
                 "X-Amz-Security-Token",
                 "X-Amz-User-Agent",
                 "X-File-Name",
                 "X-File-Type",
-                self.auth_header_name,  # Custom auth header
             ],
-            max_age=Duration.days(1),
-        )
+        ).api
         # endregion
 
         # region Custom Domain Setup for API Gateway

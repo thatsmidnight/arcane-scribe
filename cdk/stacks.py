@@ -17,7 +17,6 @@ from aws_cdk import (
     aws_s3_notifications as s3n,
     aws_certificatemanager as acm,
     aws_apigatewayv2_authorizers as apigwv2_authorizers,
-    aws_apigatewayv2_integrations as apigwv2_integrations,
 )
 from constructs import Construct
 
@@ -193,21 +192,6 @@ class ArcaneScribeStack(Stack):
             description="Arcane Scribe API backend Lambda function",
         )
 
-        # Lambda for generating pre-signed URLs for document uploads
-        self.presigned_url_lambda = self.create_lambda_function(
-            construct_id="PresignedUrlLambda",
-            src_folder_path="as-presigned-url-generator",
-            environment={
-                "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name
-            },
-            description="Generates pre-signed S3 URLs for uploading documents",
-        )
-
-        # Grant S3 permission to the presigned URL Lambda to put objects (via
-        # pre-signed URLs) to the documents bucket
-        self.documents_bucket.grant_put(self.presigned_url_lambda)
-        self.documents_bucket.grant_read(self.presigned_url_lambda)
-
         # Lambda for PDF ingestion and processing
         self.pdf_ingestor_lambda = self.create_lambda_function(
             construct_id="PdfIngestorLambda",
@@ -235,34 +219,6 @@ class ArcaneScribeStack(Stack):
             s3n.LambdaDestination(self.pdf_ingestor_lambda),
             s3.NotificationKeyFilter(suffix=".pdf"),  # Only for PDFs
         )
-
-        # Lambda for RAG queries (using Langchain)
-        self.rag_query_lambda = self.create_lambda_function(
-            construct_id="RagQueryLambda",
-            src_folder_path="as-rag-query",
-            environment={
-                "VECTOR_STORE_BUCKET_NAME": (
-                    self.vector_store_bucket.bucket_name
-                ),
-                "BEDROCK_TEXT_GENERATION_MODEL_ID": (
-                    self.bedrock_text_generation_model_id
-                ),
-                "BEDROCK_EMBEDDING_MODEL_ID": (
-                    self.bedrock_embedding_model_id
-                ),  # For query embedding
-                "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
-            },
-            memory_size=1024,  # More memory for processing queries
-            timeout=Duration.seconds(60),
-            initial_policy=[self.bedrock_invoke_policy],
-            description="Handles RAG queries using Langchain, retrieves documents from S3, and generates answers using Bedrock",
-        )
-
-        # Grant S3 permissions for the RAG query Lambda
-        self.vector_store_bucket.grant_read(self.rag_query_lambda)
-
-        # Grant DynamoDB permissions for the RAG query Lambda
-        self.query_cache_table.grant_read_write_data(self.rag_query_lambda)
 
         # Lambda for the custom authorizer
         self.authorizer_lambda = self.create_lambda_function(
@@ -302,39 +258,11 @@ class ArcaneScribeStack(Stack):
         )
 
         # Create an authorizer for the HTTP API
-        http_lambda_authorizer = self.create_http_lambda_authorizer(
+        _ = self.create_http_lambda_authorizer(
             construct_id="ArcaneScribeHttpLambdaAuthorizer",
             name="arcane-scribe-http-authorizer",
             authorizer_function=self.authorizer_lambda,
             identity_source=[f"$request.header.{final_auth_header_name}"],
-        )
-
-        # Integration for pre-signed URL generation
-        presigned_url_integration = apigwv2_integrations.HttpLambdaIntegration(
-            "PresignedUrlIntegration",
-            handler=self.presigned_url_lambda,
-        )
-
-        # Add a route for pre-signed URL generation
-        self.http_api.http_api.add_routes(
-            path="/srd/upload-url",
-            methods=[apigwv2.HttpMethod.POST],
-            integration=presigned_url_integration,
-            authorizer=http_lambda_authorizer,
-        )
-
-        # Integration for RAG queries
-        rag_query_integration = apigwv2_integrations.HttpLambdaIntegration(
-            "RagQueryIntegration",
-            handler=self.rag_query_lambda,
-        )
-
-        # Add a route for RAG queries
-        self.http_api.http_api.add_routes(
-            path="/query",
-            methods=[apigwv2.HttpMethod.POST],
-            integration=rag_query_integration,
-            authorizer=http_lambda_authorizer,
         )
         # endregion
 

@@ -1,5 +1,5 @@
 # Standard Library
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 # Third Party
 from aws_cdk import (
@@ -20,6 +20,7 @@ from aws_cdk import (
 from constructs import Construct
 
 # Local Modules
+from cdk.cognito_stack import CognitoStack
 from cdk.custom_constructs import (
     CustomDynamoDBTable,
     CustomIAMPolicyStatement,
@@ -28,7 +29,6 @@ from cdk.custom_constructs import (
     CustomS3Bucket,
     CustomRestApi,
     CustomTokenAuthorizer,
-    CustomCognitoUserPool,
 )
 
 
@@ -85,28 +85,29 @@ class ArcaneScribeStack(Stack):
         # endregion
 
         # region Cognito User Pool for Authentication
-        # Create a Cognito User Pool for authentication
-        user_pool = self.create_cognito_user_pool(
-            construct_id="ArcaneScribeUserPool", name="arcane-scribe-user-pool"
-        )
-
-        # Create user pool client for authorizer Lambda
-        user_pool_client = user_pool.add_client(
-            id="ArcaneScribeUserPoolClient", name="arcane-scribe-client"
+        # Instantiate the self-contained Cognito stack
+        cognito_nested_stack = CognitoStack(
+            self,
+            "ArcaneScribeCognitoNestedStack",
+            name="arcane-scribe-cognito",
+            admin_email=self.admin_email,
+            admin_username=self.admin_username,
+            admin_password_secret_name=self.admin_secret_name,
+            stack_suffix=self.stack_suffix,
         )
 
         # Output user pool ID and client ID
         CfnOutput(
             self,
             "UserPoolIdOutput",
-            value=user_pool.user_pool.user_pool_id,
+            value=cognito_nested_stack.user_pool_id,
             description="Cognito User Pool ID for Arcane Scribe",
             export_name=f"arcane-scribe-user-pool-id{self.stack_suffix}",
         )
         CfnOutput(
             self,
             "UserPoolClientIdOutput",
-            value=user_pool_client.user_pool_client_id,
+            value=cognito_nested_stack.user_pool_client_id,
             description="Cognito User Pool Client ID for Arcane Scribe",
             export_name=(
                 f"arcane-scribe-user-pool-client-id{self.stack_suffix}"
@@ -244,7 +245,7 @@ class ArcaneScribeStack(Stack):
             self.create_iam_policy_statement(
                 construct_id="AuthorizerLambdaAdminAuthPolicy",
                 actions=["cognito-idp:AdminInitiateAuth"],
-                resources=[user_pool.user_pool.user_pool_arn],
+                resources=[cognito_nested_stack.user_pool.user_pool_arn],
             ).statement
         )
 
@@ -253,8 +254,10 @@ class ArcaneScribeStack(Stack):
             construct_id="ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
-                "USER_POOL_ID": user_pool.user_pool.user_pool_id,
-                "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
+                "USER_POOL_ID": cognito_nested_stack.user_pool.user_pool_id,
+                "USER_POOL_CLIENT_ID": (
+                    cognito_nested_stack.user_pool_client_id
+                ),
             },
             role=authorizer_lambda_role,
             description="Custom authorizer for Arcane Scribe HTTP API",

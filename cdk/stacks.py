@@ -22,15 +22,15 @@ from aws_cdk import (
 from constructs import Construct
 
 # Local Modules
-from cdk.custom_constructs.iam_role import CustomIamRole
-from cdk.custom_constructs.http_api import CustomHttpApiGateway
-from cdk.custom_constructs.s3_bucket import CustomS3Bucket
-from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
-from cdk.custom_constructs.lambda_function import CustomLambdaFromDockerImage
-from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
-from cdk.custom_constructs.iam_policy_statement import CustomIAMPolicyStatement
-from cdk.custom_constructs.http_lambda_authorizer import (
+from cdk.custom_constructs import (
+    ApiCustomDomain,
+    CustomDynamoDBTable,
+    CustomHttpApiGateway,
     CustomHttpLambdaAuthorizer,
+    CustomIAMPolicyStatement,
+    CustomIamRole,
+    CustomLambdaFromDockerImage,
+    CustomS3Bucket,
 )
 
 

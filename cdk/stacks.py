@@ -228,17 +228,44 @@ class ArcaneScribeStack(Stack):
         )
 
         # Lambda for the custom authorizer
+        # Create authorizer Lambda role
+        authorizer_lambda_role = self.create_iam_role(
+            construct_id="AuthorizerLambdaRole",
+            name="arcane-scribe-authorizer-role",
+        ).role
+
+        # Grant permission to call AdminInitiateAuth on the user pool
+        authorizer_lambda_role.add_to_policy(
+            self.create_iam_policy_statement(
+                construct_id="AuthorizerLambdaAdminAuthPolicy",
+                actions=["cognito-idp:AdminInitiateAuth"],
+                resources=[user_pool.user_pool.user_pool_arn],
+            ).statement
+        )
+
         self.authorizer_lambda = self.create_lambda_function(
             construct_id="ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
-                "EXPECTED_AUTH_HEADER_NAME": self.auth_header_name,
+                "USER_POOL_ID": user_pool.user_pool.user_pool_id,
+                "USER_POOL_CLIENT_ID": user_pool_client.user_pool_client_id,
             },
+            role=authorizer_lambda_role,
             description="Custom authorizer for Arcane Scribe HTTP API",
         )
         # endregion
 
         # region API Gateway
+        # Create an authorizer for the REST API
+        api_authorizer = self.create_token_authorizer(
+            construct_id="ArcaneScribeAuthorizer",
+            name="arcane-scribe-api-authorizer",
+            handler=self.authorizer_lambda,
+            identity_source=apigw.IdentitySource.header(
+                self.auth_header_name
+            ),
+        )
+
         # Create a custom REST API Gateway
         self.rest_api = self.create_rest_api_gateway(
             construct_id="ArcaneScribeHttpApi",
@@ -297,7 +324,7 @@ class ArcaneScribeStack(Stack):
         api_proxy_resource.add_method(
             "ANY",
             integration=lambda_integration,
-            # TODO: Add authorizer
+            authorizer=api_authorizer,  # Use the authorizer for all other routes
         )
 
         # Output the REST API URL

@@ -24,7 +24,7 @@ from api_backend import (
 from api_backend.aws import S3Client, DynamoDb, BedrockRuntimeClient
 
 # Initialize logger
-logger = Logger(service="rag-query-processor-bedrock")
+logger = Logger(service="rag-query-processor")
 
 # Default SRD ID for the System Reference Document (SRD) and cache settings
 DEFAULT_SRD_ID = "dnd5e_srd"

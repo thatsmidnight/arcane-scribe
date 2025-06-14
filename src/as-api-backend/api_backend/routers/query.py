@@ -27,6 +27,22 @@ router = APIRouter(prefix="/query", tags=["Query"])
     status_code=status.HTTP_200_OK,
 )
 def query_endpoint(request: RagQueryRequest = Body(...)) -> JSONResponse:
+    """Query endpoint for Retrieval-Augmented Generation (RAG) queries.
+
+    **Parameters:**
+    - **request**: RagQueryRequest
+        The request body containing the query text, SRD ID, and optional
+        parameters for generative LLM configuration, including:
+        - `query_text`: The text of the query to process.
+        - `srd_id`: The ID of the SRD document to query against.
+        - `invoke_generative_llm`: Flag to indicate if a generative LLM should be invoked.
+        - `use_conversation_style`: Flag to indicate if conversational style should be used.
+        - `generation_config`: Optional configuration for generation.
+
+    **Returns:**
+    - **JSONResponse**: A JSON response containing the query results or an
+    error message if the request fails.
+    """
     try:
         # Extract query text and SRD ID from the request body
         query_text = request.query_text.strip()

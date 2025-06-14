@@ -168,6 +168,30 @@ class ArcaneScribeStack(Stack):
             ).statement
         )
 
+        # Backend API Lambda function
+        self.as_backend_lambda = self.create_lambda_function(
+            construct_id="ArcaneScribeApiLambda",
+            src_folder_path="as-api-backend",
+            environment={
+                "API_PREFIX": self.api_prefix,
+                "VECTOR_STORE_BUCKET_NAME": (
+                    self.vector_store_bucket.bucket_name
+                ),
+                "BEDROCK_TEXT_GENERATION_MODEL_ID": (
+                    self.bedrock_text_generation_model_id
+                ),
+                "BEDROCK_EMBEDDING_MODEL_ID": (
+                    self.bedrock_embedding_model_id
+                ),  # For query embedding
+                "QUERY_CACHE_TABLE_NAME": self.query_cache_table.table_name,
+                "HOME_IP_SSM_PARAMETER_NAME": imported_home_ip_ssm_param_name,
+            },
+            memory_size=1024,
+            timeout=Duration.seconds(30),
+            role=backend_lambda_role,
+            description="Arcane Scribe API backend Lambda function",
+        )
+
         # Lambda for generating pre-signed URLs for document uploads
         self.presigned_url_lambda = self.create_lambda_function(
             construct_id="PresignedUrlLambda",

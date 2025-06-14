@@ -1,7 +1,18 @@
+# Standard Library
 from enum import Enum
 
 
 class AllowedMethod(str, Enum):
+    """Enumeration of allowed HTTP methods.
+
+    Attributes:
+        get: HTTP GET method.
+        post: HTTP POST method.
+        put: HTTP PUT method.
+        delete: HTTP DELETE method.
+        patch: HTTP PATCH method.
+        head: HTTP HEAD method.
+    """
     get = "GET"
     post = "POST"
     put = "PUT"

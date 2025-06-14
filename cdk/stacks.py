@@ -66,6 +66,9 @@ class ArcaneScribeStack(Stack):
         self.bedrock_text_generation_model_id = self.node.try_get_context(
             "bedrock_text_generation_model_id"
         )
+        self.auth_header_name = self.node.try_get_context(
+            "authorizer_header_name"
+        )
         # endregion
 
         # region Import CloudFormation Outputs
@@ -73,23 +76,6 @@ class ArcaneScribeStack(Stack):
         imported_home_ip_ssm_param_name = Fn.import_value(
             "home-ip-ssm-param-name"
         )
-        # endregion
-
-        # region Authorization Header and Secret
-        # Retrieve context variables passed from CDK CLI
-        self.auth_header_name = self.node.try_get_context(
-            "authorizer_header_name"
-        )
-        self.auth_secret_value = self.node.try_get_context(
-            "authorizer_secret_value"
-        )
-
-        if not self.auth_secret_value:
-            # Fail deployment if the secret value isn't provided, especially for non-local scenarios.
-            # For local dev, cdk.json might provide a default, but CI should always pass it.
-            raise ValueError(
-                "CRITICAL: 'authorizer_secret_value' context variable must be provided for deployment."
-            )
         # endregion
 
         # region S3 Buckets
@@ -216,7 +202,6 @@ class ArcaneScribeStack(Stack):
             src_folder_path="as-authorizer",
             environment={
                 "EXPECTED_AUTH_HEADER_NAME": self.auth_header_name,
-                "EXPECTED_AUTH_HEADER_VALUE": self.auth_secret_value,
             },
             description="Custom authorizer for Arcane Scribe HTTP API",
         )

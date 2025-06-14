@@ -632,6 +632,8 @@ class ArcaneScribeStack(Stack):
         self,
         construct_id: str,
         name: str,
+        allow_methods: Optional[List[str]] = None,
+        allow_headers: Optional[List[str]] = None,
         tracing_enabled: Optional[bool] = True,
         data_trace_enabled: Optional[bool] = True,
         metrics_enabled: Optional[bool] = True,
@@ -645,6 +647,11 @@ class ArcaneScribeStack(Stack):
             The ID of the construct.
         name : str
             The name of the REST API.
+        allow_methods : Optional[List[str]], optional
+            List of allowed HTTP methods for CORS, by default None
+            (will use apigw.Cors.ALL_METHODS if not provided)
+        allow_headers : Optional[List[str]], optional
+            List of allowed headers for CORS, by default None
         tracing_enabled : Optional[bool], optional
             Whether to enable tracing for the API, by default True
         data_trace_enabled : Optional[bool], optional
@@ -669,6 +676,8 @@ class ArcaneScribeStack(Stack):
             tracing_enabled=tracing_enabled,
             data_trace_enabled=data_trace_enabled,
             metrics_enabled=metrics_enabled,
+            allow_methods=allow_methods,
+            allow_headers=allow_headers,
             additional_headers=[
                 "Content-Type",
                 "Authorization",

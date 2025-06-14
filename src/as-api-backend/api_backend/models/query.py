@@ -63,7 +63,7 @@ class RagQueryRequest(BaseModel):
 
     query_text: str = Field(..., description="The query text to process")
     invoke_generative_llm: Optional[bool] = Field(
-        default=True,
+        default=False,
         description="Whether to invoke generative LLM for response",
     )
     use_conversation_style: Optional[bool] = Field(

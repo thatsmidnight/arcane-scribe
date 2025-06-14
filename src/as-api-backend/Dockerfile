@@ -5,7 +5,7 @@ ENV LAMBDA_TASK_ROOT=/var/task
 
 # Copy function code
 COPY handler.py ${LAMBDA_TASK_ROOT}/
-ADD rag_query_processor/ ${LAMBDA_TASK_ROOT}/rag_query_processor
+ADD api_backend/ ${LAMBDA_TASK_ROOT}/api_backend
 
 # Install dependencies from requirements.txt
 COPY requirements.txt ${LAMBDA_TASK_ROOT}/

@@ -206,12 +206,8 @@ jobs:
         run: |
           poetry run cdk synth \
             --context stack-suffix=${{ needs.setup.outputs.stack-suffix }} \
-            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }} \
             -q
         env:
-          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
-          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
           CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
@@ -282,12 +278,8 @@ jobs:
       - name: CDK Deploy
         run: |
           poetry run cdk deploy --all --require-approval never \
-            --context stack-suffix=${{ needs.setup.outputs.stack-suffix }} \
-            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+            --context stack-suffix=${{ needs.setup.outputs.stack-suffix }}
         env:
-          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
-          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
           CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
@@ -385,12 +377,8 @@ jobs:
         run: |
           echo "Destroying CDK stack with suffix: ${{ env.STACK_SUFFIX }}"
           poetry run cdk destroy --all --force \
-            --context stack-suffix=${{ env.STACK_SUFFIX }} \
-            --context authorizer_secret_value=${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }} \
-            --context authorizer_header_name=${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
+            --context stack-suffix=${{ env.STACK_SUFFIX }}
         env:
-          CDK_AUTHORIZER_SECRET_VALUE: ${{ secrets.AUTHORIZER_HEADER_SECRET_VALUE }}
-          CDK_AUTHORIZER_HEADER_NAME: ${{ secrets.AUTHORIZER_HEADER_NAME_CONFIG || 'X-Custom-Auth-Token' }}
           CDK_DEFAULT_ACCOUNT: ${{ vars.CDK_DEFAULT_ACCOUNT }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden
           AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}  # Default region, can be overridden

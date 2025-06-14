@@ -7,92 +7,63 @@ import hashlib
 from typing import Optional, Dict, Any
 
 # Third Party
-import boto3
 from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
-from langchain_aws import (
-    BedrockEmbeddings,
-    ChatBedrock,
-)
+from langchain_aws import ChatBedrock
 from langchain_community.vectorstores import FAISS
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.prompts import PromptTemplate
+from api_backend import (
+    BEDROCK_EMBEDDING_MODEL_ID,
+    BEDROCK_TEXT_GENERATION_MODEL_ID,
+    VECTOR_STORE_BUCKET_NAME,
+    QUERY_CACHE_TABLE_NAME,
+)
+from api_backend.aws import S3Client, DynamoDb, BedrockRuntimeClient
 
 # Initialize logger
-logger = Logger(service="rag_query_processor_bedrock")
+logger = Logger(service="rag-query-processor")
 
-# Initialize Boto3 clients for S3, DynamoDB (for caching), and Bedrock runtime
-try:
-    s3_client = boto3.client("s3")
-    dynamodb_client = boto3.client("dynamodb")  # For caching
-    # Initialize Bedrock runtime client. Region should be picked up from AWS_DEFAULT_REGION env var.
-    bedrock_runtime_client = boto3.client(service_name="bedrock-runtime")
-except Exception as e:
-    logger.exception(
-        f"Failed to initialize Boto3 clients in RAG processor: {e}"
-    )
-    s3_client = None
-    dynamodb_client = None
-    bedrock_runtime_client = None
-
-# Get the Bedrock embedding and text generation model IDs from environment variables or use defaults
-BEDROCK_EMBEDDING_MODEL_ID = os.environ.get(
-    "BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0"
-)
-BEDROCK_TEXT_GENERATION_MODEL_ID = os.environ.get(
-    "BEDROCK_TEXT_GENERATION_MODEL_ID", "amazon.titan-text-express-v1"
-)
-
-# Get the vector store bucket name and query cache table name from environment variables
-VECTOR_STORE_BUCKET_NAME = os.environ.get("VECTOR_STORE_BUCKET_NAME")
-QUERY_CACHE_TABLE_NAME = os.environ.get("QUERY_CACHE_TABLE_NAME")
-
-# Default SRD ID for the System Reference Document (SRD) and cache settings
-DEFAULT_SRD_ID = "dnd5e_srd"
+# Default cache settings
 CACHE_TTL_SECONDS = 3600  # Cache responses for 1 hour, adjust as needed
 
 # Settings for the FAISS index cache
-faiss_index_cache: dict[str, FAISS] = {}
+FAISS_INDEX_CACHE: dict[str, FAISS] = {}
 MAX_CACHE_SIZE = 3
 
-# Initialize the embedding model
-try:
-    logger.info(
-        f"Initializing BedrockEmbeddings model: {BEDROCK_EMBEDDING_MODEL_ID}"
-    )
-    embedding_model = BedrockEmbeddings(
-        client=bedrock_runtime_client, model_id=BEDROCK_EMBEDDING_MODEL_ID
-    )
-    logger.info("BedrockEmbeddings model initialized.")
-except Exception as e:
-    logger.exception(f"Failed to initialize BedrockEmbeddings model: {e}")
-    embedding_model = None
-
-
 # Initialize default LLM instance
-_default_llm_instance = None
+DEFAULT_LLM_INSTANCE: Optional[ChatBedrock] = None
 
 
 def get_llm_instance(
     generation_config: Dict[str, Any],
 ) -> Optional[ChatBedrock]:
-    """Get a ChatBedrock instance configured with the provided generation config.
-    This function validates the generation_config parameters and applies them
-    to the ChatBedrock instance. If the configuration is invalid or if the
-    ChatBedrock instance cannot be created, it will return the default instance
-    if available, or None if no default instance is set.
+    """Get a ChatBedrock instance configured with the provided generation
+    config. This function validates the generation_config parameters and
+    applies them to the ChatBedrock instance. If the configuration is invalid
+    or if the ChatBedrock instance cannot be created, it will return the
+    default instance if available, or None if no default instance is set.
 
     Parameters
     ----------
     generation_config : Dict[str, Any]
-        _description_
+        The generation configuration parameters, which may include:
+        - temperature (float): Controls randomness in generation.
+        - topP (float): Controls diversity via nucleus sampling.
+        - maxTokenCount (int): Maximum number of tokens to generate.
+        - stopSequences (list of str): Sequences that will stop generation.
 
     Returns
     -------
     Optional[ChatBedrock]
-        _description_
+        A ChatBedrock instance configured with the provided generation config,
+        or None if the configuration is invalid or if no default instance is
+        set.
     """
-    global _default_llm_instance  # Can be used if no dynamic config provided
+    global DEFAULT_LLM_INSTANCE  # Can be used if no dynamic config provided
+
+    # Initialize the Bedrock runtime client
+    bedrock_runtime_client = BedrockRuntimeClient()
 
     # Initialize the model kwargs as an empty dictionary
     effective_model_kwargs = {}
@@ -149,9 +120,8 @@ def get_llm_instance(
 
     # Create ChatBedrock instance with effective model kwargs
     try:
-        current_llm = ChatBedrock(
-            client=bedrock_runtime_client,
-            model=BEDROCK_TEXT_GENERATION_MODEL_ID,
+        current_llm = bedrock_runtime_client.get_chat_model(
+            model_id=BEDROCK_TEXT_GENERATION_MODEL_ID,
             model_kwargs=effective_model_kwargs,
         )
         logger.info(
@@ -163,15 +133,14 @@ def get_llm_instance(
         logger.exception(
             f"Failed to initialize dynamic ChatBedrock instance: {e_llm_init}"
         )
-        _default_llm_instance = ChatBedrock(
-            client=bedrock_runtime_client,
-            model=BEDROCK_TEXT_GENERATION_MODEL_ID,
+        DEFAULT_LLM_INSTANCE = bedrock_runtime_client.get_chat_model(
+            model_id=BEDROCK_TEXT_GENERATION_MODEL_ID,
             model_kwargs={
                 "temperature": 0.1,
                 "maxTokenCount": 1024,
             },
         )
-        return _default_llm_instance  # Return the default instance if dynamic config fails
+        return DEFAULT_LLM_INSTANCE  # Return default instance if dynamic config fails
 
 
 def _load_faiss_index_from_s3(
@@ -191,22 +160,16 @@ def _load_faiss_index_from_s3(
     Optional[FAISS]
         The loaded FAISS index, or None if loading failed.
     """
-    # Check if the required clients and embedding model are initialized
-    if not s3_client or not embedding_model:  # Check new embedding_model
-        lambda_logger.error(
-            "S3 client or Bedrock embedding model not initialized."
-        )
-        return None
+    # Initialize the Bedrock runtime client
+    bedrock_runtime_client = BedrockRuntimeClient()
 
-    # Check if the bucket name is configured
-    if not VECTOR_STORE_BUCKET_NAME:
-        lambda_logger.error("VECTOR_STORE_BUCKET_NAME not configured.")
-        return None
+    # Initialize the S3 client
+    s3_client = S3Client(bucket_name=VECTOR_STORE_BUCKET_NAME)
 
     # Check if the FAISS index is already in cache
-    if srd_id in faiss_index_cache:
+    if srd_id in FAISS_INDEX_CACHE:
         lambda_logger.info(f"FAISS index for '{srd_id}' found in cache.")
-        return faiss_index_cache[srd_id]
+        return FAISS_INDEX_CACHE[srd_id]
 
     # Construct the S3 key for the FAISS index
     s3_index_prefix = f"{srd_id}/faiss_index"
@@ -229,22 +192,28 @@ def _load_faiss_index_from_s3(
             lambda_logger.info(
                 f"Downloading s3://{VECTOR_STORE_BUCKET_NAME}/{s3_key} to {local_file_path}"
             )
-            s3_client.download_file(
-                VECTOR_STORE_BUCKET_NAME, s3_key, local_file_path
+            download_file_success = s3_client.download_file(
+                object_key=s3_key, download_path=local_file_path
+            )
+            logger.info(
+                f"Result of S3 download for {s3_key}: "
+                f"{'SUCCESS' if download_file_success else 'FAILURE'}"
             )
 
         # Load the FAISS index from the local directory
         vector_store = FAISS.load_local(
             folder_path=local_faiss_dir,
-            embeddings=embedding_model,  # Uses BedrockEmbeddings
+            embeddings=bedrock_runtime_client.get_embedding_model(
+                model_id=BEDROCK_EMBEDDING_MODEL_ID
+            ),  # Uses BedrockEmbeddings
             allow_dangerous_deserialization=True,
         )
 
         # Check if the vector store was loaded successfully
-        if len(faiss_index_cache) >= MAX_CACHE_SIZE:
-            oldest_key = next(iter(faiss_index_cache))
-            faiss_index_cache.pop(oldest_key)
-        faiss_index_cache[srd_id] = vector_store
+        if len(FAISS_INDEX_CACHE) >= MAX_CACHE_SIZE:
+            oldest_key = next(iter(FAISS_INDEX_CACHE))
+            FAISS_INDEX_CACHE.pop(oldest_key)
+        FAISS_INDEX_CACHE[srd_id] = vector_store
         return vector_store
     except Exception as e:
         lambda_logger.exception(
@@ -266,7 +235,7 @@ def get_answer_from_rag(
     invoke_generative_llm: bool,
     use_conversational_style: bool,
     generation_config_payload: Dict[str, Any],
-    lambda_logger: Logger,
+    lambda_logger: Optional[Logger] = None,
 ) -> Dict[str, Any]:
     """Process a query using RAG (Retrieval-Augmented Generation) with Bedrock.
     This function retrieves relevant documents from a FAISS index and
@@ -286,8 +255,9 @@ def get_answer_from_rag(
     generation_config_payload : Dict[str, Any]
         Configuration payload for the LLM generation, including parameters
         like temperature, max tokens, etc.
-    lambda_logger : Logger
-        The logger instance to use for logging.
+    lambda_logger : Optional[Logger]
+        The logger instance to use for logging. If None, a default logger
+        will be used.
 
     Returns
     -------
@@ -295,22 +265,17 @@ def get_answer_from_rag(
         The response containing the answer and source information, or an error
         message.
     """
-    # Ensure the clients and models are initialized
-    if not bedrock_runtime_client or not embedding_model:
-        lambda_logger.error(
-            "RAG components (Bedrock clients, models) not initialized."
-        )
-        return {
-            "error": (
-                "Internal server error: Query processing components not ready."
-            )
-        }
+    # Initialize the DynamoDB client
+    dynamodb_client = DynamoDb(table_name=QUERY_CACHE_TABLE_NAME)
 
-    # Check if the query cache table name is set
-    if not QUERY_CACHE_TABLE_NAME and invoke_generative_llm:
-        # Cache only relevant if LLM is invoked
+    # Use the provided logger or create a new one if not provided
+    if lambda_logger is None:
+        lambda_logger = logger
+
+    # Cache table is only relevant if LLM is invoked
+    if invoke_generative_llm:
         lambda_logger.warning(
-            "QUERY_CACHE_TABLE_NAME not set; Bedrock LLM response caching will be disabled."
+            "Invoking generative LLM, cache table will be used for caching responses."
         )
 
     # Generate a cache key
@@ -324,13 +289,18 @@ def get_answer_from_rag(
 
             # Attempt to get the cached response from DynamoDB
             response = dynamodb_client.get_item(
-                TableName=QUERY_CACHE_TABLE_NAME,
-                Key={"query_hash": {"S": query_hash}},
+                key={"query_hash": query_hash},
+            )
+
+            # TODO: REMOVE THIS LINE AFTER TESTING
+            lambda_logger.info(
+                f"Cache response for query_hash {query_hash}: {response}"
             )
 
             # Check if the item exists and is still valid (TTL)
             if (
-                "Item" in response
+                response
+                and "Item" in response
                 and int(response["Item"].get("ttl", {"N": "0"})["N"])
                 > time.time()
             ):
@@ -468,23 +438,20 @@ Helpful Answer:"""
                 # Store the response in DynamoDB cache
                 ttl_value = int(time.time() + CACHE_TTL_SECONDS)
                 dynamodb_client.put_item(
-                    TableName=QUERY_CACHE_TABLE_NAME,
-                    Item={
-                        "query_hash": {"S": query_hash},
-                        "answer": {"S": answer},
-                        "srd_id": {"S": srd_id},
-                        "query_text": {"S": query_text},
-                        "source_documents_summary": {
-                            "S": ("; ".join(source_docs_content))[:1000]
-                        },
-                        "timestamp": {"S": str(time.time())},
-                        "ttl": {"N": str(ttl_value)},
-                        "generation_config_used": {
-                            "S": json.dumps(generation_config_payload)
-                        },
-                        "was_conversational": {
-                            "BOOL": use_conversational_style
-                        },
+                    item={
+                        "query_hash": query_hash,
+                        "answer": answer,
+                        "srd_id": srd_id,
+                        "query_text": query_text,
+                        "source_documents_summary": (
+                            "; ".join(source_docs_content)
+                        )[:1000],
+                        "timestamp": str(time.time()),
+                        "ttl": str(ttl_value),
+                        "generation_config_used": json.dumps(
+                            generation_config_payload
+                        ),
+                        "was_conversational": use_conversational_style,
                     },
                 )
                 lambda_logger.info(

@@ -246,6 +246,61 @@ class ArcaneScribeStack(Stack):
                 "X-File-Type",
             ],
         ).api
+
+        # Define the Lambda integration for the REST API
+        lambda_integration = apigw.LambdaIntegration(
+            handler=self.as_backend_lambda,
+            proxy=True,  # Enable proxy integration
+            allow_test_invoke=(
+                self.stack_suffix != ""
+            ),  # Allow test invocations in the API Gateway console
+        )
+
+        # Get the base resource for the API
+        api_base_resource = self.rest_api.root
+
+        # Add the prefix to the API base resource
+        if self.api_prefix:
+            # Split prefix into parts
+            path_parts = self.api_prefix.strip("/").split("/")
+            current_resource = api_base_resource
+
+            # Create nested resources for each part of the prefix
+            for path_part in path_parts:
+                # Check if resource already exists
+                existing_resource = current_resource.get_resource(path_part)
+                if existing_resource:
+                    current_resource = existing_resource
+                else:
+                    current_resource = current_resource.add_resource(path_part)
+            api_base_resource = current_resource  # This is now /api/v1 resource
+
+        # Add specific documentation routes WITHOUT the authorizer
+        docs_paths = ["docs", "redoc", "openapi.json"]
+        for doc_path in docs_paths:
+            doc_resource = api_base_resource.add_resource(doc_path)
+            doc_resource.add_method(
+                "GET",
+                integration=lambda_integration,
+                authorizer=None,  # No authorizer for documentation routes
+            )
+
+        # Add {proxy+} resource integration to the REST API
+        api_proxy_resource = api_base_resource.add_resource("{proxy+}")
+        api_proxy_resource.add_method(
+            "ANY",
+            integration=lambda_integration,
+            # TODO: Add authorizer
+        )
+
+        # Output the REST API URL
+        CfnOutput(
+            self,
+            "RestApiUrlOutput",
+            value=self.rest_api.url,
+            description="REST API URL for Arcane Scribe",
+            export_name=f"arcane-scribe-rest-api-url{self.stack_suffix}",
+        )
         # endregion
 
         # region Custom Domain Setup for API Gateway

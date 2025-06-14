@@ -232,11 +232,7 @@ class ArcaneScribeStack(Stack):
         self.rest_api = self.create_rest_api_gateway(
             construct_id="ArcaneScribeHttpApi",
             name="arcane-scribe-rest-api",
-            allow_methods=[
-                apigwv2.CorsHttpMethod.POST,
-                apigwv2.CorsHttpMethod.GET,
-                apigwv2.CorsHttpMethod.OPTIONS,
-            ],
+            allow_methods=["POST", "GET", "OPTIONS"],
             allow_headers=[
                 "X-Amz-Date",
                 "X-Api-Key",

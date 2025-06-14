@@ -26,10 +26,8 @@ class ResponseSource(str, Enum):
 
     Attributes:
         retrieval_only: Response generated using only retrieval methods.
-        generative_llm: Response generated using a generative LLM.
-        hybrid: Response generated using a combination of retrieval and generative methods.
+        bedrock_llm: Response generated using Bedrock LLM.
     """
 
     retrieval_only = "retrieval_only"
-    generative_llm = "generative_llm"
-    hybrid = "hybrid"
+    bedrock_llm = "bedrock_llm"

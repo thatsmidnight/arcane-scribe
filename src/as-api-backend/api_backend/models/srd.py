@@ -59,3 +59,17 @@ class PresignedUrlResponse(BaseModel):
     method: AllowedMethod = Field(
         ..., description="The HTTP method for the upload operation."
     )
+
+
+class PresignedUrlErrorResponse(BaseModel):
+    """Pydantic model for error responses when generating presigned URLs.
+
+    Attributes:
+        error: The error message describing the issue.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    error: str = Field(
+        ..., description="Error message describing the issue."
+    )

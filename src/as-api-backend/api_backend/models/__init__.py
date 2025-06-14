@@ -5,12 +5,17 @@ Retrieval-Augmented Generation (RAG) queries and presigned URL requests.
 """
 
 # Third Party
-from api_backend.models.srd import PresignedUrlRequest, PresignedUrlResponse
+from api_backend.models.srd import (
+    PresignedUrlRequest,
+    PresignedUrlResponse,
+    PresignedUrlErrorResponse,
+)
 from api_backend.models.query import RagQueryRequest, GenerationConfig
 
 __all__ = [
     "PresignedUrlRequest",
     "PresignedUrlResponse",
+    "PresignedUrlErrorResponse",
     "RagQueryRequest",
     "GenerationConfig",
 ]

@@ -174,6 +174,7 @@ class ArcaneScribeStack(Stack):
             src_folder_path="as-api-backend",
             environment={
                 "API_PREFIX": self.api_prefix,
+                "DOCUMENTS_BUCKET_NAME": self.documents_bucket.bucket_name,
                 "VECTOR_STORE_BUCKET_NAME": (
                     self.vector_store_bucket.bucket_name
                 ),

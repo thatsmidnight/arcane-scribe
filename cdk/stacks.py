@@ -277,7 +277,7 @@ class ArcaneScribeStack(Stack):
 
         # Create a custom REST API Gateway
         self.rest_api = self.create_rest_api_gateway(
-            construct_id="ArcaneScribeHttpApi",
+            construct_id="ArcaneScribeRestApi",
             name="arcane-scribe-rest-api",
             allow_methods=["POST", "GET", "OPTIONS"],
             allow_headers=[

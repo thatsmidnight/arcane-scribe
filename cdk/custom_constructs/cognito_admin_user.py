@@ -42,12 +42,12 @@ import cfnresponse
 import os
 
 cognito_client = boto3.client('cognito-idp')
-secrets_client = boto3.client('secrets-manager')
+secrets_client = boto3.client('secretsmanager')
 
 def get_password_from_secret(secret_name):
     print(f"Fetching password from Secrets Manager secret: {secret_name}")
     response = secrets_client.get_secret_value(SecretId=secret_name)
-    return response['SecretString']
+    return json.loads(response['SecretString'])
 
 def lambda_handler(event, context):
     props = event.get('ResourceProperties', {})
@@ -109,7 +109,7 @@ def lambda_handler(event, context):
         print(f"Error: {str(e)}")
         # Truncate the error message to fit within the 4KB limit
         error_message = f"Error: {str(e)}"
-        truncated_message = error_message[:512] # Truncate to a safe length
+        truncated_message = error_message[:1024] # Truncate to a safe length
         cfnresponse.send(
             event,
             context,

@@ -227,8 +227,8 @@ class ArcaneScribeStack(Stack):
             construct_id="ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",
             environment={
-                "EXPECTED_AUTH_HEADER_NAME": final_auth_header_name,
-                "EXPECTED_AUTH_HEADER_VALUE": auth_secret_value_from_context,
+                "EXPECTED_AUTH_HEADER_NAME": self.auth_header_name,
+                "EXPECTED_AUTH_HEADER_VALUE": self.auth_secret_value,
             },
             description="Custom authorizer for Arcane Scribe HTTP API",
         )
@@ -254,7 +254,7 @@ class ArcaneScribeStack(Stack):
                 "X-Amz-User-Agent",
                 "X-File-Name",
                 "X-File-Type",
-                final_auth_header_name,  # Custom auth header
+                self.auth_header_name,  # Custom auth header
             ],
             max_age=Duration.days(1),
         )

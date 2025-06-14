@@ -79,14 +79,14 @@ class ArcaneScribeStack(Stack):
 
         # region Authorization Header and Secret
         # Retrieve context variables passed from CDK CLI
-        auth_header_name_from_context = self.node.try_get_context(
+        self.auth_header_name = self.node.try_get_context(
             "authorizer_header_name"
         )
-        auth_secret_value_from_context = self.node.try_get_context(
+        self.auth_secret_value = self.node.try_get_context(
             "authorizer_secret_value"
         )
 
-        if not auth_secret_value_from_context:
+        if not self.auth_secret_value:
             # Fail deployment if the secret value isn't provided, especially for non-local scenarios.
             # For local dev, cdk.json might provide a default, but CI should always pass it.
             raise ValueError(
@@ -96,8 +96,8 @@ class ArcaneScribeStack(Stack):
         # Use a default if the header name context variable isn't provided.
         # This matches the default in the GitHub Actions workflow.
         final_auth_header_name = (
-            auth_header_name_from_context
-            if auth_header_name_from_context
+            self.auth_header_name
+            if self.auth_header_name
             else "X-Custom-Auth-Token"
         )
         # endregion

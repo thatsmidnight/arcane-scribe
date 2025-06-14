@@ -70,6 +70,11 @@ class ArcaneScribeStack(Stack):
         self.auth_header_name = self.node.try_get_context(
             "authorizer_header_name"
         )
+        self.admin_email = self.node.try_get_context("admin_email")
+        self.admin_username = self.node.try_get_context("admin_username")
+        self.admin_secret_name = self.node.try_get_context(
+            "admin_secret_name"
+        )
         # endregion
 
         # region Import CloudFormation Outputs

@@ -26,7 +26,7 @@ router = APIRouter(prefix="/query", tags=["Query"])
     response_model=Union[RagQueryResponse, RagQueryErrorResponse],
     status_code=status.HTTP_200_OK,
 )
-def query_endpoint(request: RagQueryRequest = Body(...),) -> JSONResponse:
+def query_endpoint(request: RagQueryRequest = Body(...)) -> JSONResponse:
     try:
         # Extract query text and SRD ID from the request body
         query_text = request.query_text.strip()

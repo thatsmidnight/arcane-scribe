@@ -250,14 +250,6 @@ class ArcaneScribeStack(Stack):
             ],
             max_age=Duration.days(1),
         )
-
-        # Create an authorizer for the HTTP API
-        _ = self.create_http_lambda_authorizer(
-            construct_id="ArcaneScribeHttpLambdaAuthorizer",
-            name="arcane-scribe-http-authorizer",
-            authorizer_function=self.authorizer_lambda,
-            identity_source=[f"$request.header.{final_auth_header_name}"],
-        )
         # endregion
 
         # region Custom Domain Setup for API Gateway

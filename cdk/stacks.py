@@ -26,7 +26,7 @@ from cdk.custom_constructs.iam_role import CustomIamRole
 from cdk.custom_constructs.http_api import CustomHttpApiGateway
 from cdk.custom_constructs.s3_bucket import CustomS3Bucket
 from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
-from cdk.custom_constructs.lambda_function import CustomLambda
+from cdk.custom_constructs.lambda_function import CustomLambdaFromDockerImage
 from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
 from cdk.custom_constructs.iam_policy_statement import CustomIAMPolicyStatement
 from cdk.custom_constructs.http_lambda_authorizer import (
@@ -529,6 +529,7 @@ class ArcaneScribeStack(Stack):
         memory_size: Optional[int] = 128,
         timeout: Optional[Duration] = Duration.seconds(10),
         initial_policy: Optional[List[iam.PolicyStatement]] = None,
+        role: Optional[iam.IRole] = None,
         description: Optional[str] = None,
     ) -> lambda_.Function:
         """Helper method to create a Lambda function.
@@ -547,6 +548,8 @@ class ArcaneScribeStack(Stack):
             Timeout for the Lambda function, by default Duration.seconds(10)
         initial_policy : Optional[List[iam.PolicyStatement]], optional
             Initial IAM policies to attach to the Lambda function, by default None
+        role : Optional[iam.IRole], optional
+            IAM role to attach to the Lambda function, by default None
         description : Optional[str], optional
             Description for the Lambda function, by default None
 
@@ -555,7 +558,7 @@ class ArcaneScribeStack(Stack):
         lambda_.Function
             The created Lambda function instance.
         """
-        custom_lambda = CustomLambda(
+        custom_lambda = CustomLambdaFromDockerImage(
             scope=self,
             id=construct_id,
             src_folder_path=src_folder_path,
@@ -564,6 +567,7 @@ class ArcaneScribeStack(Stack):
             memory_size=memory_size,
             timeout=timeout,
             initial_policy=initial_policy or [],
+            role=role,
             description=description,
         )
         return custom_lambda.function

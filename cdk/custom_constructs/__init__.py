@@ -16,6 +16,8 @@ The constructs included in this module are:
 - CustomRestApi: Custom REST API Gateway with additional configurations.
 - CustomS3Bucket: Custom S3 bucket with additional configurations.
 - CustomTokenAuthorizer: Custom token authorizer for API Gateway.
+- CustomCognitoUserPool: Custom Cognito User Pool with additional configurations.
+- CognitoAdminUser: Custom construct for managing an admin user in a Cognito User Pool.
 """
 
 from .api_custom_domain import ApiCustomDomain
@@ -29,6 +31,7 @@ from .rest_api import CustomRestApi
 from .s3_bucket import CustomS3Bucket
 from .token_authorizer import CustomTokenAuthorizer
 from .cognito_user_pool import CustomCognitoUserPool
+from .cognito_admin_user import CognitoAdminUser
 
 __all__ = [
     "ApiCustomDomain",
@@ -42,4 +45,5 @@ __all__ = [
     "CustomS3Bucket",
     "CustomTokenAuthorizer",
     "CustomCognitoUserPool",
+    "CognitoAdminUser",
 ]

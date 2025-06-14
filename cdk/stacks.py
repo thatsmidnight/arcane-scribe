@@ -260,7 +260,7 @@ class ArcaneScribeStack(Stack):
                 ),
             },
             role=authorizer_lambda_role,
-            description="Custom authorizer for Arcane Scribe HTTP API",
+            description="Custom authorizer for Arcane Scribe REST API",
         )
         # endregion
 

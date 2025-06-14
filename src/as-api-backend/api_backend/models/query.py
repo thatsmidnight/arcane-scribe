@@ -61,9 +61,7 @@ class RagQueryRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    query_text: str = Field(
-        ..., min_length=1, description="The query text to process"
-    )
+    query_text: str = Field(..., description="The query text to process")
     invoke_generative_llm: Optional[bool] = Field(
         default=True,
         description="Whether to invoke generative LLM for response",
@@ -76,7 +74,7 @@ class RagQueryRequest(BaseModel):
         default=None, description="Configuration settings for text generation"
     )
     srd_id: str = Field(
-        ..., min_length=1, description="System Reference Document identifier"
+        ..., description="System Reference Document identifier"
     )
 
 

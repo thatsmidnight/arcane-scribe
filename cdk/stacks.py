@@ -12,6 +12,7 @@ from aws_cdk import (
     aws_lambda as lambda_,
     aws_route53 as route53,
     aws_dynamodb as dynamodb,
+    aws_apigateway as apigw,
     aws_apigatewayv2 as apigwv2,
     aws_route53_targets as targets,
     aws_s3_notifications as s3n,
@@ -30,6 +31,7 @@ from cdk.custom_constructs import (
     CustomIamRole,
     CustomLambdaFromDockerImage,
     CustomS3Bucket,
+    CustomRestApi,
 )
 
 
@@ -641,3 +643,53 @@ class ArcaneScribeStack(Stack):
             http_api=http_api,
             stack_suffix=self.stack_suffix,
         )
+
+    def create_rest_api_gateway(
+        self,
+        construct_id: str,
+        name: str,
+        tracing_enabled: Optional[bool] = True,
+        data_trace_enabled: Optional[bool] = True,
+        metrics_enabled: Optional[bool] = True,
+        authorizer: Optional[apigw.IAuthorizer] = None,
+    ) -> CustomRestApi:
+        """Helper method to create a REST API Gateway.
+
+        Parameters
+        ----------
+        construct_id : str
+            The ID of the construct.
+        name : str
+            The name of the REST API.
+        tracing_enabled : Optional[bool], optional
+            Whether to enable tracing for the API, by default True
+        data_trace_enabled : Optional[bool], optional
+            Whether to enable data tracing for the API, by default True
+        metrics_enabled : Optional[bool], optional
+            Whether to enable metrics for the API, by default True
+        authorizer : Optional[apigw.IAuthorizer], optional
+            The authorizer to use for the API, by default None
+
+        Returns
+        -------
+        CustomRestApi
+            The created REST API Gateway instance.
+        """
+        custom_rest_api = CustomRestApi(
+            scope=self,
+            id=construct_id,
+            name=name,
+            stack_suffix=self.stack_suffix,
+            description="Cartographers Cloud Kit REST API",
+            stage_name=self.stack_suffix.strip("-") or "prod",
+            tracing_enabled=tracing_enabled,
+            data_trace_enabled=data_trace_enabled,
+            metrics_enabled=metrics_enabled,
+            additional_headers=[
+                "Content-Type",
+                "Authorization",
+                self.auth_header_name,
+            ],
+            authorizer=authorizer,
+        )
+        return custom_rest_api

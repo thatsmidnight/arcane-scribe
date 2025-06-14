@@ -94,14 +94,6 @@ class ArcaneScribeStack(Stack):
             raise ValueError(
                 "CRITICAL: 'authorizer_secret_value' context variable must be provided for deployment."
             )
-
-        # Use a default if the header name context variable isn't provided.
-        # This matches the default in the GitHub Actions workflow.
-        final_auth_header_name = (
-            self.auth_header_name
-            if self.auth_header_name
-            else "X-Custom-Auth-Token"
-        )
         # endregion
 
         # region S3 Buckets

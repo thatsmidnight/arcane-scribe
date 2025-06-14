@@ -6,7 +6,7 @@ from api_backend import DOCUMENTS_BUCKET_NAME
 from api_backend.aws import S3Client
 
 # Initialize logger
-logger = Logger(service="presigned-url-generator-processor")
+logger = Logger(service="presigned-url-generator")
 
 
 def generate_presigned_url(

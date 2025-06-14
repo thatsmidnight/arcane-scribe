@@ -467,3 +467,34 @@ class S3Client:
                 e,
             )
             return None
+
+    def download_file(
+        self,
+        object_key: str,
+        download_path: str,
+        bucket_name: Optional[str] = None,
+    ) -> bool:
+        """Download a file from S3 to a local path.
+
+        Parameters
+        ----------
+        object_key : str
+            The key (path) in the S3 bucket of the file to be downloaded.
+        download_path : str
+            The local path where the file will be saved.
+        bucket_name : Optional[str]
+            The name of the S3 bucket. If not provided, the bucket_name
+            specified during initialization will be used.
+
+        Returns
+        -------
+        bool
+            True if the download was successful, False otherwise.
+        """
+        # Use the provided bucket name or the one from initialization
+        if bucket_name is None:
+            bucket_name = self.bucket_name
+
+        return self._client.download_file(
+            Bucket=bucket_name, Key=object_key, Filename=download_path
+        )

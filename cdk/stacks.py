@@ -243,6 +243,7 @@ class ArcaneScribeStack(Stack):
             ).statement
         )
 
+        # Create the authorizer Lambda function
         self.authorizer_lambda = self.create_lambda_function(
             construct_id="ArcaneScribeAuthorizerLambda",
             src_folder_path="as-authorizer",

@@ -28,6 +28,7 @@ from .lambda_function import CustomLambdaFromDockerImage
 from .rest_api import CustomRestApi
 from .s3_bucket import CustomS3Bucket
 from .token_authorizer import CustomTokenAuthorizer
+from .cognito_user_pool import CustomCognitoUserPool
 
 __all__ = [
     "ApiCustomDomain",
@@ -40,4 +41,5 @@ __all__ = [
     "CustomRestApi",
     "CustomS3Bucket",
     "CustomTokenAuthorizer",
+    "CustomCognitoUserPool",
 ]

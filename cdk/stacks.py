@@ -130,7 +130,7 @@ class ArcaneScribeStack(Stack):
                 f"arn:aws:bedrock:{self.region}::foundation-model/{self.bedrock_embedding_model_id}",
                 f"arn:aws:bedrock:{self.region}::foundation-model/{self.bedrock_text_generation_model_id}",
             ],
-        )
+        ).statement
         # endregion
 
         # region Lambda Functions
@@ -414,30 +414,38 @@ class ArcaneScribeStack(Stack):
         construct_id: str,
         actions: List[str],
         resources: List[str],
-    ) -> iam.PolicyStatement:
-        """Helper method to create an IAM policy statement.
+        effect: Optional[iam.Effect] = iam.Effect.ALLOW,
+        conditions: Optional[dict] = None,
+    ) -> CustomIAMPolicyStatement:
+        """Helper method to create an IAM Policy Statement.
 
         Parameters
         ----------
         construct_id : str
             The ID of the construct.
         actions : List[str]
-            List of IAM actions for the policy statement.
+            List of IAM actions to allow or deny.
         resources : List[str]
-            List of resource ARNs for the policy statement.
+            List of resources the actions apply to.
+        effect : Optional[iam.Effect], optional
+            The effect of the policy statement, by default iam.Effect.ALLOW
+        conditions : Optional[dict], optional
+            Conditions for the policy statement, by default None
 
         Returns
         -------
-        iam.PolicyStatement
-            The created IAM policy statement instance.
+        CustomIAMPolicyStatement
+            The created IAM Policy Statement instance.
         """
         custom_iam_policy_statement = CustomIAMPolicyStatement(
             scope=self,
             id=construct_id,
             actions=actions,
             resources=resources,
+            effect=effect,
+            conditions=conditions or {},
         )
-        return custom_iam_policy_statement.statement
+        return custom_iam_policy_statement
 
     def create_lambda_function(
         self,

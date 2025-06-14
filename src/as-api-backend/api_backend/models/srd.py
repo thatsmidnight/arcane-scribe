@@ -20,10 +20,10 @@ class PresignedUrlRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     file_name: str = Field(
-        ..., description="The name of the file to upload.", min_length=1
+        ..., description="The name of the file to upload.",
     )
     srd_id: str = Field(
-        ..., description="The ID of the SRD document.", min_length=1
+        ..., description="The ID of the SRD document.",
     )
     content_type: Optional[str] = Field(
         default=None, description="Optional content type for the file."

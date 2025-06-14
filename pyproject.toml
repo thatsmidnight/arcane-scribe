@@ -8,8 +8,6 @@ readme = "README.md"
 package-mode = true
 packages = [
     { include = "pdf_ingestor", from = "src/as-pdf-ingestor" },
-    { include = "presigned_url_generator", from = "src/as-presigned-url-generator" },
-    { include = "rag_query_processor", from = "src/as-rag-query" },
 ]
 
 [tool.poetry.dependencies]

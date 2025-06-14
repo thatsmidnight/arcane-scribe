@@ -3,35 +3,35 @@ from typing import Optional, List
 
 # Third Party
 from aws_cdk import (
+    Fn,
     Stack,
-    aws_apigatewayv2 as apigwv2,
-    aws_apigatewayv2_integrations as apigwv2_integrations,
-    aws_apigatewayv2_authorizers as apigwv2_authorizers,
-    aws_s3_notifications as s3n,
-    aws_dynamodb as dynamodb,
+    Duration,
+    CfnOutput,
     aws_s3 as s3,
     aws_iam as iam,
     aws_lambda as lambda_,
-    Duration,
-    CfnOutput,
-    aws_certificatemanager as acm,
     aws_route53 as route53,
+    aws_dynamodb as dynamodb,
+    aws_apigatewayv2 as apigwv2,
     aws_route53_targets as targets,
+    aws_s3_notifications as s3n,
+    aws_certificatemanager as acm,
+    aws_apigatewayv2_authorizers as apigwv2_authorizers,
+    aws_apigatewayv2_integrations as apigwv2_integrations,
 )
 from constructs import Construct
 
 # Local Modules
+from cdk.custom_constructs.iam_role import CustomIamRole
+from cdk.custom_constructs.http_api import CustomHttpApiGateway
 from cdk.custom_constructs.s3_bucket import CustomS3Bucket
-from cdk.custom_constructs.lambda_function import CustomLambda
 from cdk.custom_constructs.dynamodb_table import CustomDynamoDBTable
-from cdk.custom_constructs.iam_policy_statement import (
-    CustomIAMPolicyStatement,
-)
+from cdk.custom_constructs.lambda_function import CustomLambda
+from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
+from cdk.custom_constructs.iam_policy_statement import CustomIAMPolicyStatement
 from cdk.custom_constructs.http_lambda_authorizer import (
     CustomHttpLambdaAuthorizer,
 )
-from cdk.custom_constructs.http_api import CustomHttpApiGateway
-from cdk.custom_constructs.api_custom_domain import ApiCustomDomain
 
 
 class ArcaneScribeStack(Stack):

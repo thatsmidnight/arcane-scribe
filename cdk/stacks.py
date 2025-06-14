@@ -32,6 +32,7 @@ from cdk.custom_constructs import (
     CustomLambdaFromDockerImage,
     CustomS3Bucket,
     CustomRestApi,
+    CustomTokenAuthorizer,
 )
 
 
@@ -565,3 +566,45 @@ class ArcaneScribeStack(Stack):
             authorizer=authorizer,
         )
         return custom_rest_api
+
+    def create_token_authorizer(
+        self,
+        construct_id: str,
+        name: str,
+        handler: lambda_.IFunction,
+        identity_source: Optional[str] = apigw.IdentitySource.header(
+            "Authorization"
+        ),
+        results_cache_ttl: Optional[Duration] = Duration.seconds(0),
+    ) -> apigw.TokenAuthorizer:
+        """Helper method to create a Token Authorizer.
+
+        Parameters
+        ----------
+        construct_id : str
+            The ID of the construct.
+        name : str
+            The name of the authorizer.
+        handler : lambda_.IFunction
+            The Lambda function to be used as the authorizer.
+        identity_source : Optional[str], optional
+            The identity source for the authorizer, by default
+            apigw.IdentitySource.header("Authorization")
+        results_cache_ttl : Optional[Duration], optional
+            Results cache TTL for the authorizer, by default Duration.seconds(0)
+
+        Returns
+        -------
+        apigw.TokenAuthorizer
+            The created Token Authorizer instance.
+        """
+        custom_token_authorizer = CustomTokenAuthorizer(
+            scope=self,
+            id=construct_id,
+            name=name,
+            handler=handler,
+            stack_suffix=self.stack_suffix,
+            identity_source=identity_source,
+            results_cache_ttl=results_cache_ttl,
+        )
+        return custom_token_authorizer.authorizer

@@ -8,5 +8,5 @@
   "bedrock_text_generation_model_id": "amazon.titan-text-express-v1",
   "admin_secret_name": "prod/arcane-scribe/admin",
   "admin_email": "thatsmidnight@thatsmidnight.com",
-  "admin_username": "thatsmidngiht"
+  "admin_username": "thatsmidnight"
 }

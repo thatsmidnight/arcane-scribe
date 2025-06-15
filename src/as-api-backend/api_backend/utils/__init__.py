@@ -17,7 +17,6 @@ from api_backend.utils.config import (
     HOME_IP_SSM_PARAMETER_NAME,
 )
 
-
 __all__ = [
     "get_answer_from_rag",
     "generate_presigned_url",

@@ -51,7 +51,9 @@ def get_presigned_upload_url(
         file_name = str(request.file_name).strip()
         srd_id = request.srd_id.strip()
         content_type = (
-            request.content_type.strip() if request.content_type else "application/pdf"
+            request.content_type.strip()
+            if request.content_type
+            else "application/pdf"
         )
     except Exception as e:
         logger.exception(

@@ -29,9 +29,7 @@ class PresignedUrlRequest(BaseModel):
     )
     content_type: Optional[str] = Field(
         None,
-        description=(
-            "Content type for the file."
-        ),
+        description=("Content type for the file."),
         examples=["application/pdf"],
     )
 

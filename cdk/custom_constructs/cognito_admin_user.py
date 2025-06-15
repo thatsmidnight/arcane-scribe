@@ -47,6 +47,7 @@ secrets_client = boto3.client('secretsmanager')
 def get_password_from_secret(secret_name):
     print(f"Fetching password from Secrets Manager secret: {secret_name}")
     response = secrets_client.get_secret_value(SecretId=secret_name)
+    print(f"Secret: {response['SecretString']}")  # TODO: REMOVE AFTER DEBUGGING
     return response['SecretString']
 
 def lambda_handler(event, context):
@@ -63,6 +64,7 @@ def lambda_handler(event, context):
                 f"Creating or updating user: {user_name} in pool: {user_pool_id}"
             )
             password = get_password_from_secret(secret_name)
+            print(f"Password: {password}")  # TODO: REMOVE AFTER DEBUGGING
 
             # Create the user without a temporary password
             cognito_client.admin_create_user(

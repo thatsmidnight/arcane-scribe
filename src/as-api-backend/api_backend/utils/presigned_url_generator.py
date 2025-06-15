@@ -1,3 +1,6 @@
+# Standard Library
+from typing import Optional
+
 # Third Party
 from aws_lambda_powertools import Logger
 
@@ -12,8 +15,8 @@ logger = Logger(service="presigned-url-generator")
 def generate_presigned_url(
     file_name: str,
     srd_id: str,
-    expiration: int = 3600,
-    content_type: str = "application/pdf",
+    expiration: Optional[int] = 3600,
+    content_type: Optional[str] = "application/pdf",
 ) -> str:
     """
     Generate a presigned URL for uploading a file to S3.
@@ -24,11 +27,12 @@ def generate_presigned_url(
         The name of the file to be uploaded.
     srd_id : str
         The client-specified SRD identifier.
-    expiration : int, optional
-        The number of seconds the presigned URL is valid for, defaults to
-        3600 seconds (1 hour).
-    content_type : str, optional
-        The content type of the file, defaults to "application/pdf".
+    expiration : Optional[int], optional
+        The expiration time for the presigned URL in seconds, defaults to 3600
+        seconds (1 hour).
+    content_type : Optional[str], optional
+        The content type of the file to be uploaded, defaults to
+        "application/pdf".
 
     Returns
     -------

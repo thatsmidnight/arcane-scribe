@@ -40,6 +40,7 @@ def get_presigned_upload_url(
         The request body containing the file name and SRD ID, including:
         - `file_name`: The name of the file to upload.
         - `srd_id`: The ID of the SRD document.
+        - `content_type` (optional): Content type for the file.
 
     **Returns:**
     - **JSONResponse**: A JSON response containing the presigned URL and other
@@ -49,6 +50,9 @@ def get_presigned_upload_url(
     try:
         file_name = str(request.file_name).strip()
         srd_id = request.srd_id.strip()
+        content_type = (
+            request.content_type.strip() if request.content_type else "application/pdf"
+        )
     except Exception as e:
         logger.exception(
             f"Error processing request input: {e}",
@@ -67,6 +71,7 @@ def get_presigned_upload_url(
             file_name=file_name,
             srd_id=srd_id,
             expiration=expiration_seconds,
+            content_type=content_type,
         )
         logger.info(
             f"Successfully generated presigned URL for key: {file_name}"

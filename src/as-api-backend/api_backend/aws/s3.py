@@ -366,6 +366,7 @@ class S3Client:
         object_key: str,
         expiration: int = 3600,
         bucket_name: Optional[str] = None,
+        content_type: Optional[str] = None,
     ) -> Optional[str]:
         """Generate a presigned URL for uploading a file to S3.
 
@@ -379,6 +380,9 @@ class S3Client:
         bucket_name : Optional[str]
             The name of the S3 bucket. If not provided, the bucket_name
             specified during initialization will be used.
+        content_type : Optional[str]
+            The content type of the file being uploaded. If provided, it will
+            be included in the presigned URL parameters.
 
         Returns
         -------
@@ -392,6 +396,10 @@ class S3Client:
         try:
             # Prepare parameters for presigned URL generation
             params = {"Bucket": bucket_name, "Key": object_key}
+
+            # Include content type if provided
+            if content_type:
+                params["ContentType"] = content_type
 
             # Generate the presigned URL
             presigned_url = self._client.generate_presigned_url(

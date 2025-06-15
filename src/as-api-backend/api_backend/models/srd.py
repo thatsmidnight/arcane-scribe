@@ -1,5 +1,5 @@
 # Third Party
-from pydantic import BaseModel, Field, ConfigDict, HttpUrl, FilePath
+from pydantic import BaseModel, Field, ConfigDict, HttpUrl
 
 # Local Modules
 from api_backend.utils import AllowedMethod
@@ -16,7 +16,7 @@ class PresignedUrlRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    file_name: FilePath = Field(
+    file_name: str = Field(
         ...,
         description="The name of the file to upload.",
     )

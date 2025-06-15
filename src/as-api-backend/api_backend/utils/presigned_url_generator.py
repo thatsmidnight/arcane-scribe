@@ -13,6 +13,7 @@ def generate_presigned_url(
     file_name: str,
     srd_id: str,
     expiration: int = 3600,
+    content_type: str = "application/pdf",
 ) -> str:
     """
     Generate a presigned URL for uploading a file to S3.
@@ -26,6 +27,8 @@ def generate_presigned_url(
     expiration : int, optional
         The number of seconds the presigned URL is valid for, defaults to
         3600 seconds (1 hour).
+    content_type : str, optional
+        The content type of the file, defaults to "application/pdf".
 
     Returns
     -------
@@ -48,6 +51,7 @@ def generate_presigned_url(
         presigned_url = s3_client.generate_presigned_upload_url(
             object_key=object_key,
             expiration=expiration,
+            content_type=content_type,
         )
 
         if not presigned_url:

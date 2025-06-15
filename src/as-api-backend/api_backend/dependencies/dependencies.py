@@ -7,8 +7,8 @@ from botocore.exceptions import ClientError
 from aws_lambda_powertools import Logger
 
 # Local Modules
-from api_backend import HOME_IP_SSM_PARAMETER_NAME
 from api_backend.aws import SsmClient
+from api_backend.utils import HOME_IP_SSM_PARAMETER_NAME
 
 # Initialize logger
 logger = Logger(service="dependencies")

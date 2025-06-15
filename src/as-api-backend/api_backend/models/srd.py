@@ -1,6 +1,3 @@
-# Standard Library
-from typing import Optional
-
 # Third Party
 from pydantic import BaseModel, Field, ConfigDict, HttpUrl, FilePath
 
@@ -26,10 +23,6 @@ class PresignedUrlRequest(BaseModel):
     srd_id: str = Field(
         ...,
         description="The ID of the SRD document.",
-    )
-    content_type: Optional[str] = Field(
-        default="application/pdf",
-        description="Optional content type for the file.",
     )
 
 

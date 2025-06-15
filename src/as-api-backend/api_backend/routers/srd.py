@@ -10,13 +10,13 @@ from aws_lambda_powertools import Logger
 from api_backend.utils import (
     generate_presigned_url,
     AllowedMethod,
-    DOCUMENTS_BUCKET_NAME,
 )
 from api_backend.models import (
     PresignedUrlRequest,
     PresignedUrlResponse,
     PresignedUrlErrorResponse,
 )
+from api_backend.utils.config import DOCUMENTS_BUCKET_NAME
 
 # Initialize logger
 logger = Logger(service="srd")

@@ -3,7 +3,7 @@ from aws_lambda_powertools import Logger
 
 # Local Modules
 from api_backend.aws import S3Client
-from api_backend.utils import DOCUMENTS_BUCKET_NAME
+from api_backend.utils.config import DOCUMENTS_BUCKET_NAME
 
 # Initialize logger
 logger = Logger(service="presigned-url-generator")

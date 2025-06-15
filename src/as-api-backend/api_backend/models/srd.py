@@ -28,7 +28,7 @@ class PresignedUrlRequest(BaseModel):
         description="The ID of the SRD document.",
     )
     content_type: Optional[str] = Field(
-        None,
+        "application/pdf",
         description=("Content type for the file."),
         examples=["application/pdf"],
     )

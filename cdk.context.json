@@ -1,0 +1,12 @@
+{
+  "stack_name_prefix": "arcane-scribe-stack",
+  "api_prefix": "/api/v1",
+  "domain_name": "thatsmidnight.com",
+  "subdomain_name": "arcane-scribe",
+  "authorizer_header_name": "x-arcane-auth-token",
+  "bedrock_embedding_model_id": "amazon.titan-embed-text-v2:0",
+  "bedrock_text_generation_model_id": "amazon.titan-text-express-v1",
+  "admin_secret_name": "prod/arcane-scribe/admin",
+  "admin_email": "thatsmidnight@thatsmidnight.com",
+  "admin_username": "thatsmidnight"
+}

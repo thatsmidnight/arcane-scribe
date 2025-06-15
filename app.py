@@ -21,7 +21,7 @@ aws_env = cdk.Environment(
 # This allows for unique stack names per feature branch
 stack_suffix = app.node.try_get_context("stack-suffix")
 formatted_stack_suffix = f"-{stack_suffix}" if stack_suffix else ""
-stack_name_prefix = "arcane-scribe-stack"
+stack_name_prefix = app.node.try_get_context("stack_name_prefix")
 
 if stack_suffix:
     final_stack_name = f"{stack_name_prefix}{formatted_stack_suffix}"
